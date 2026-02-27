@@ -1,0 +1,34 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+  errors:
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    - prefer_single_quotes
+    - prefer_final_locals
+    - prefer_final_in_for_each
+    - prefer_final_parameters
+    - avoid_print
+    - avoid_dynamic_calls
+    - avoid_returning_null_for_future
+    - cancel_subscriptions
+    - close_sinks
+    - comment_references
+    - directives_ordering
+    - omit_local_variable_types
+    - prefer_expression_function_bodies
+    - prefer_intl_to_nominal
+    - prefer_relative_imports
+    - prefer_void_to_null
+    - test_types_in_equals
+    - throw_in_finally
+    - unnecessary_statements
+    - unsafe_html
+    - use_full_hex_values_for_flutter_colors
+    - use_if_null_to_convert_nulls_to_bools
+    - use_is_even_rather_than_modulo

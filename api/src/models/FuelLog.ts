@@ -1,0 +1,1 @@
+// Placeholder - Fuel log model
