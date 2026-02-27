@@ -59,11 +59,13 @@ UserSchema.virtual('id').get(function () {
 UserSchema.set('toJSON', {
   virtuals: true,
   transform: (_doc, ret) => {
-    delete ret._id;
-    delete ret.__v;
-    delete ret.passwordHash; // Never expose password
-    delete ret.refreshTokens; // Never expose refresh tokens
-    return ret;
+    // Cast to unknown first, then to Record for delete operations
+    const transformed = (ret as unknown) as Record<string, unknown>;
+    delete transformed._id;
+    delete transformed.__v;
+    delete transformed.passwordHash; // Never expose password
+    delete transformed.refreshTokens; // Never expose refresh tokens
+    return transformed;
   },
 });
 
