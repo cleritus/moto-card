@@ -2,11 +2,12 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { fuelLogService } from '../services/fuelLogService';
 import { createError } from '../middleware/errorHandler';
+import { getPaginationParams } from '../utils/pagination';
 
 export const fuelLogController = {
   /**
    * Get all fuel logs for a vehicle
-   * GET /api/fuel-logs/:vehicleId
+   * GET /api/fuel-logs/:vehicleId?page=1&limit=20
    */
   getAllFuelLogs: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
@@ -20,12 +21,13 @@ export const fuelLogController = {
       throw createError('Vehicle ID is required', 400);
     }
 
-    const fuelLogs = await fuelLogService.getAllFuelLogs(userId, vehicleId);
+    const { page, limit } = getPaginationParams(req.query);
+    const result = await fuelLogService.getAllFuelLogs(userId, vehicleId, page, limit);
 
     res.status(200).json({
       success: true,
-      count: fuelLogs.length,
-      data: { fuelLogs },
+      data: { fuelLogs: result.data },
+      pagination: result.pagination,
     });
   }),
 

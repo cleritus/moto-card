@@ -2,11 +2,12 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler';
 import { vehicleService } from '../services/vehicleService';
 import { createError } from '../middleware/errorHandler';
+import { getPaginationParams } from '../utils/pagination';
 
 export const vehicleController = {
   /**
    * Get all vehicles for the authenticated user
-   * GET /api/vehicles
+   * GET /api/vehicles?page=1&limit=20
    */
   getAllVehicles: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
@@ -15,12 +16,13 @@ export const vehicleController = {
       throw createError('User not authenticated', 401);
     }
 
-    const vehicles = await vehicleService.getAllVehicles(userId);
+    const { page, limit } = getPaginationParams(req.query);
+    const result = await vehicleService.getAllVehicles(userId, page, limit);
 
     res.status(200).json({
       success: true,
-      count: vehicles.length,
-      data: { vehicles },
+      data: { vehicles: result.data },
+      pagination: result.pagination,
     });
   }),
 

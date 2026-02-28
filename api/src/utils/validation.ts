@@ -193,6 +193,40 @@ export const validateServiceLogCreate: ValidationChain[] = [
   handleValidationErrors as unknown as ValidationChain,
 ];
 
+// Service log update validation (all fields optional)
+export const validateServiceLogUpdate: ValidationChain[] = [
+  body('date')
+    .optional()
+    .isISO8601()
+    .withMessage('Please enter a valid date')
+    .toDate(),
+  body('mileage')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Mileage must be a positive number')
+    .toInt(),
+  body('serviceType')
+    .optional()
+    .notEmpty()
+    .withMessage('Service type cannot be empty')
+    .trim(),
+  body('description')
+    .optional()
+    .trim(),
+  body('mechanic')
+    .optional()
+    .trim(),
+  body('totalCost')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Total cost must be a positive number')
+    .toFloat(),
+  body('notes')
+    .optional()
+    .trim(),
+  handleValidationErrors as unknown as ValidationChain,
+];
+
 // Reminder validation
 export const validateReminderCreate: ValidationChain[] = [
   body('title')
@@ -212,5 +246,37 @@ export const validateReminderCreate: ValidationChain[] = [
     .isInt({ min: 0 })
     .withMessage('Due mileage must be a positive number')
     .toInt(),
+  handleValidationErrors as unknown as ValidationChain,
+];
+
+// Reminder update validation (all fields optional)
+export const validateReminderUpdate: ValidationChain[] = [
+  body('title')
+    .optional()
+    .notEmpty()
+    .withMessage('Title cannot be empty')
+    .trim(),
+  body('type')
+    .optional()
+    .isIn(['date', 'mileage'])
+    .withMessage('Type must be either "date" or "mileage"'),
+  body('dueDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Please enter a valid date')
+    .toDate(),
+  body('dueMileage')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Due mileage must be a positive number')
+    .toInt(),
+  body('isCompleted')
+    .optional()
+    .isBoolean()
+    .withMessage('isCompleted must be a boolean')
+    .toBoolean(),
+  body('notes')
+    .optional()
+    .trim(),
   handleValidationErrors as unknown as ValidationChain,
 ];

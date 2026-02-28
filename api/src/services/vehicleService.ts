@@ -1,5 +1,6 @@
 import Vehicle, { IVehicle } from '../models/Vehicle';
 import { createError } from '../middleware/errorHandler';
+import { buildPaginationMeta, PaginationMeta } from '../utils/pagination';
 
 export interface VehicleCreateData {
   name: string;
@@ -17,12 +18,29 @@ export interface VehicleUpdateData {
   mileage?: number;
 }
 
+export interface VehicleListResult {
+  data: IVehicle[];
+  pagination: PaginationMeta;
+}
+
 export class VehicleService {
   /**
-   * Get all vehicles for a user
+   * Get all vehicles for a user with pagination
    */
-  async getAllVehicles(userId: string): Promise<IVehicle[]> {
-    return Vehicle.findByUser(userId);
+  async getAllVehicles(
+    userId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<VehicleListResult> {
+    const [vehicles, total] = await Promise.all([
+      Vehicle.findByUser(userId, { page, limit }),
+      Vehicle.countByUser(userId),
+    ]);
+
+    return {
+      data: vehicles,
+      pagination: buildPaginationMeta(page, limit, total),
+    };
   }
 
   /**

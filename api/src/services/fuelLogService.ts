@@ -1,6 +1,7 @@
 import FuelLog, { IFuelLog } from '../models/FuelLog';
 import Vehicle from '../models/Vehicle';
 import { createError } from '../middleware/errorHandler';
+import { buildPaginationMeta, PaginationMeta } from '../utils/pagination';
 
 export interface FuelLogCreateData {
   date?: Date;
@@ -18,6 +19,11 @@ export interface FuelLogUpdateData {
   notes?: string;
 }
 
+export interface FuelLogListResult {
+  data: IFuelLog[];
+  pagination: PaginationMeta;
+}
+
 export class FuelLogService {
   /**
    * Verify that the user owns the vehicle
@@ -30,11 +36,25 @@ export class FuelLogService {
   }
 
   /**
-   * Get all fuel logs for a vehicle
+   * Get all fuel logs for a vehicle with pagination
    */
-  async getAllFuelLogs(userId: string, vehicleId: string): Promise<IFuelLog[]> {
+  async getAllFuelLogs(
+    userId: string,
+    vehicleId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<FuelLogListResult> {
     await this.verifyVehicleOwnership(userId, vehicleId);
-    return FuelLog.findByVehicle(vehicleId);
+
+    const [fuelLogs, total] = await Promise.all([
+      FuelLog.findByVehicle(vehicleId, { page, limit }),
+      FuelLog.countByVehicle(vehicleId),
+    ]);
+
+    return {
+      data: fuelLogs,
+      pagination: buildPaginationMeta(page, limit, total),
+    };
   }
 
   /**

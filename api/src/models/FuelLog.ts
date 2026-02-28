@@ -14,8 +14,9 @@ export interface IFuelLog extends Document {
 
 // Interface for static methods
 interface IFuelLogModel extends mongoose.Model<IFuelLog> {
-  findByVehicle(vehicleId: string): Promise<IFuelLog[]>;
+  findByVehicle(vehicleId: string, options?: { page?: number; limit?: number }): Promise<IFuelLog[]>;
   findByVehicleAndId(vehicleId: string, fuelLogId: string): Promise<IFuelLog | null>;
+  countByVehicle(vehicleId: string): Promise<number>;
 }
 
 // Schema definition
@@ -64,12 +65,23 @@ const FuelLogSchema = new Schema<IFuelLog, IFuelLogModel>(
 FuelLogSchema.index({ vehicleId: 1, date: -1 });
 
 // Statics (model-level)
-FuelLogSchema.statics.findByVehicle = function (vehicleId: string) {
-  return this.find({ vehicleId }).sort({ date: -1 });
+FuelLogSchema.statics.findByVehicle = function (vehicleId: string, options?: { page?: number; limit?: number }) {
+  let query = this.find({ vehicleId }).sort({ date: -1 });
+
+  if (options && options.page !== undefined && options.limit !== undefined) {
+    const skip = (options.page - 1) * options.limit;
+    query = query.skip(skip).limit(options.limit);
+  }
+
+  return query;
 };
 
 FuelLogSchema.statics.findByVehicleAndId = function (vehicleId: string, fuelLogId: string) {
   return this.findOne({ _id: fuelLogId, vehicleId });
+};
+
+FuelLogSchema.statics.countByVehicle = function (vehicleId: string) {
+  return this.countDocuments({ vehicleId });
 };
 
 // Virtuals

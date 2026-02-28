@@ -14,8 +14,9 @@ export interface IVehicle extends Document {
 
 // Interface for static methods
 interface IVehicleModel extends mongoose.Model<IVehicle> {
-  findByUser(userId: string): Promise<IVehicle[]>;
+  findByUser(userId: string, options?: { page?: number; limit?: number }): Promise<IVehicle[]>;
   findByUserAndId(userId: string, vehicleId: string): Promise<IVehicle | null>;
+  countByUser(userId: string): Promise<number>;
 }
 
 // Schema definition
@@ -66,12 +67,23 @@ const VehicleSchema = new Schema<IVehicle, IVehicleModel>(
 VehicleSchema.index({ userId: 1, name: 1 });
 
 // Statics (model-level)
-VehicleSchema.statics.findByUser = function (userId: string) {
-  return this.find({ userId }).sort({ createdAt: -1 });
+VehicleSchema.statics.findByUser = function (userId: string, options?: { page?: number; limit?: number }) {
+  let query = this.find({ userId }).sort({ createdAt: -1 });
+
+  if (options && options.page !== undefined && options.limit !== undefined) {
+    const skip = (options.page - 1) * options.limit;
+    query = query.skip(skip).limit(options.limit);
+  }
+
+  return query;
 };
 
 VehicleSchema.statics.findByUserAndId = function (userId: string, vehicleId: string) {
   return this.findOne({ _id: vehicleId, userId });
+};
+
+VehicleSchema.statics.countByUser = function (userId: string) {
+  return this.countDocuments({ userId });
 };
 
 // Virtuals
