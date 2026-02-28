@@ -22,4 +22,15 @@ class User {
         'email': email,
         'createdAt': createdAt?.toIso8601String(),
       };
+
+  User copyWith({
+    String? id,
+    String? email,
+    DateTime? createdAt,
+  }) =>
+      User(
+        id: id ?? this.id,
+        email: email ?? this.email,
+        createdAt: createdAt ?? this.createdAt,
+      );
 }

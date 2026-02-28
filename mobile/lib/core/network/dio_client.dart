@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../config/constants.dart';
+import 'token_interceptor.dart';
 
 class DioClient {
   late final Dio _dio;
@@ -21,6 +23,7 @@ class DioClient {
     );
 
     _dio.interceptors.add(_authInterceptor());
+    _dio.interceptors.add(TokenInterceptor(storage: _secureStorage, dio: _dio));
     _dio.interceptors.add(_logInterceptor());
   }
 
@@ -29,17 +32,10 @@ class DioClient {
   Interceptor _authInterceptor() => InterceptorsWrapper(
         onRequest: (final options, final handler) async {
           final token = await _secureStorage.read(key: AppConstants.accessTokenKey);
-          if (token != null) {
+          if (token != null && options.headers['Authorization'] == null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           return handler.next(options);
-        },
-        onError: (final error, final handler) async {
-          if (error.response?.statusCode == 401) {
-            // Handle token refresh or logout
-            await _secureStorage.deleteAll();
-          }
-          return handler.next(error);
         },
       );
 

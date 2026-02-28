@@ -22,7 +22,6 @@ linter:
     - directives_ordering
     - omit_local_variable_types
     - prefer_expression_function_bodies
-    - prefer_intl_to_nominal
     - prefer_relative_imports
     - prefer_void_to_null
     - test_types_in_equals
