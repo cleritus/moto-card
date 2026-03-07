@@ -4,6 +4,9 @@ import '../../presentation/providers/auth_provider.dart';
 import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/login_screen.dart';
 import '../../presentation/screens/register_screen.dart';
+import '../../presentation/screens/vehicle_list_screen.dart';
+import '../../presentation/screens/vehicle_detail_screen.dart';
+import '../../presentation/screens/vehicle_form_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
@@ -13,9 +16,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isAuthenticated = authState.status == AuthStatus.authenticated;
       final isAuthRoute = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      final isVehicleRoute = state.matchedLocation.startsWith('/vehicles');
 
       if (!isAuthenticated && !isAuthRoute) return '/login';
-      if (isAuthenticated && isAuthRoute) return '/home';
+      if (isAuthenticated && isAuthRoute) return '/vehicles';
       return null;
     },
     routes: [
@@ -30,6 +34,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/vehicles',
+        builder: (context, state) => const VehicleListScreen(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return VehicleDetailScreen(id: id);
+            },
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return VehicleFormScreen(id: id);
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'new',
+            builder: (context, state) => const VehicleFormScreen(),
+          ),
+        ],
       ),
     ],
   );

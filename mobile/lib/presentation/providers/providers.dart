@@ -3,8 +3,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 import '../../core/network/dio_client.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
+import '../../data/datasources/vehicle_remote_data_source.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../data/repositories/vehicle_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/repositories/vehicle_repository.dart';
 
 final secureStorageProvider = Provider<FlutterSecureStorage>(
   (ref) => const FlutterSecureStorage(),
@@ -29,4 +32,14 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final dataSource = ref.watch(authRemoteDataSourceProvider);
   final storage = ref.watch(secureStorageProvider);
   return AuthRepositoryImpl(dataSource: dataSource, storage: storage);
+});
+
+final vehicleRemoteDataSourceProvider = Provider<VehicleRemoteDataSource>((ref) {
+  final dio = ref.watch(dioProvider);
+  return VehicleRemoteDataSource(dio: dio);
+});
+
+final vehicleRepositoryProvider = Provider<VehicleRepository>((ref) {
+  final dataSource = ref.watch(vehicleRemoteDataSourceProvider);
+  return VehicleRepositoryImpl(dataSource: dataSource);
 });

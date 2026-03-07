@@ -1,28 +1,22 @@
 class Vehicle {
   final String id;
   final String userId;
-  final String brand;
-  final String model;
+  final String name;
+  final String make;
+  final String vehicleModel;
   final int year;
-  final String? licensePlate;
-  final String? vin;
-  final int mileage;
-  final DateTime? purchaseDate;
-  final String? notes;
+  final int? mileage;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   const Vehicle({
     required this.id,
     required this.userId,
-    required this.brand,
-    required this.model,
+    required this.name,
+    required this.make,
+    required this.vehicleModel,
     required this.year,
-    this.licensePlate,
-    this.vin,
-    required this.mileage,
-    this.purchaseDate,
-    this.notes,
+    this.mileage,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -30,16 +24,11 @@ class Vehicle {
   factory Vehicle.fromJson(Map<String, dynamic> json) => Vehicle(
         id: json['id'] as String,
         userId: json['userId'] as String,
-        brand: json['brand'] as String,
-        model: json['model'] as String,
+        name: json['name'] as String,
+        make: json['make'] as String,
+        vehicleModel: json['vehicleModel'] as String,
         year: json['year'] as int,
-        licensePlate: json['licensePlate'] as String?,
-        vin: json['vin'] as String?,
-        mileage: json['mileage'] as int,
-        purchaseDate: json['purchaseDate'] != null
-            ? DateTime.parse(json['purchaseDate'] as String)
-            : null,
-        notes: json['notes'] as String?,
+        mileage: json['mileage'] as int?,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
       );
@@ -47,15 +36,35 @@ class Vehicle {
   Map<String, dynamic> toJson() => {
         'id': id,
         'userId': userId,
-        'brand': brand,
-        'model': model,
+        'name': name,
+        'make': make,
+        'vehicleModel': vehicleModel,
         'year': year,
-        'licensePlate': licensePlate,
-        'vin': vin,
         'mileage': mileage,
-        'purchaseDate': purchaseDate?.toIso8601String(),
-        'notes': notes,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
+
+  Vehicle copyWith({
+    String? id,
+    String? userId,
+    String? name,
+    String? make,
+    String? vehicleModel,
+    int? year,
+    int? mileage,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) =>
+      Vehicle(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        name: name ?? this.name,
+        make: make ?? this.make,
+        vehicleModel: vehicleModel ?? this.vehicleModel,
+        year: year ?? this.year,
+        mileage: mileage ?? this.mileage,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
 }
