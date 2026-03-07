@@ -7,6 +7,9 @@ import '../../presentation/screens/fuel_log_list_screen.dart';
 import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/login_screen.dart';
 import '../../presentation/screens/register_screen.dart';
+import '../../presentation/screens/service_log_detail_screen.dart';
+import '../../presentation/screens/service_log_form_screen.dart';
+import '../../presentation/screens/service_log_list_screen.dart';
 import '../../presentation/screens/vehicle_list_screen.dart';
 import '../../presentation/screens/vehicle_detail_screen.dart';
 import '../../presentation/screens/vehicle_form_screen.dart';
@@ -86,6 +89,40 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) {
                       final id = state.pathParameters['id']!;
                       return FuelLogFormScreen(vehicleId: id);
+                    },
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'service-logs',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return ServiceLogListScreen(vehicleId: id);
+                },
+                routes: [
+                  GoRoute(
+                    path: ':logId',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      final logId = state.pathParameters['logId']!;
+                      return ServiceLogDetailScreen(vehicleId: id, id: logId);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final logId = state.pathParameters['logId']!;
+                          return ServiceLogFormScreen(vehicleId: id, id: logId);
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return ServiceLogFormScreen(vehicleId: id);
                     },
                   ),
                 ],
