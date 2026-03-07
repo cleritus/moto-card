@@ -1,35 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/vehicle_provider.dart';
+import 'package:intl/intl.dart';
+import '../providers/fuel_log_provider.dart';
 
-class VehicleDetailScreen extends ConsumerWidget {
+class FuelLogDetailScreen extends ConsumerWidget {
+  final String vehicleId;
   final String id;
 
-  const VehicleDetailScreen({super.key, required this.id});
+  const FuelLogDetailScreen({super.key, required this.vehicleId, required this.id});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(vehicleDetailProvider(id));
+    final state = ref.watch(fuelLogDetailProvider((vehicleId, id)));
 
-    ref.listen<VehicleDetailState>(vehicleDetailProvider(id), (previous, next) {
-      if (next.status == VehicleDetailStatus.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMessage ?? 'Wystąpił błąd')),
-        );
-      }
-    });
+    ref.listen<FuelLogDetailState>(
+      fuelLogDetailProvider((vehicleId, id)),
+      (previous, next) {
+        if (next.status == FuelLogDetailStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(next.errorMessage ?? 'Wystąpił błąd')),
+          );
+        }
+      },
+    );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(state.vehicle?.name ?? 'Pojazd'),
+        title: const Text('Tankowanie'),
         actions: [
-          if (state.vehicle != null)
+          if (state.fuelLog != null)
             IconButton(
               icon: const Icon(Icons.edit),
-              onPressed: () => context.push('/vehicles/$id/edit'),
+              onPressed: () => context.push('/vehicles/$vehicleId/fuel-logs/$id/edit'),
             ),
-          if (state.vehicle != null)
+          if (state.fuelLog != null)
             IconButton(
               icon: const Icon(Icons.delete),
               onPressed: () => _confirmDelete(context, ref),
@@ -40,29 +45,31 @@ class VehicleDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, VehicleDetailState state) {
+  Widget _buildBody(BuildContext context, WidgetRef ref, FuelLogDetailState state) {
+    final numberFormat = NumberFormat.decimalPattern('pl_PL');
+
     switch (state.status) {
-      case VehicleDetailStatus.loading:
+      case FuelLogDetailStatus.loading:
         return const Center(child: CircularProgressIndicator());
-      case VehicleDetailStatus.loaded:
-        if (state.vehicle == null) {
-          return const Center(child: Text('Pojazd nie został znaleziony'));
+      case FuelLogDetailStatus.loaded:
+        if (state.fuelLog == null) {
+          return const Center(child: Text('Tankowanie nie zostało znalezione'));
         }
-        final vehicle = state.vehicle!;
+        final fuelLog = state.fuelLog!;
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
             _buildInfoCard(
               context,
               'Informacje',
-              Icons.info_outline,
+              Icons.local_gas_station,
               [
-                _buildInfoRow('Nazwa', vehicle.name),
-                _buildInfoRow('Marka', vehicle.make),
-                _buildInfoRow('Model', vehicle.vehicleModel),
-                _buildInfoRow('Rok', vehicle.year.toString()),
-                if (vehicle.mileage != null)
-                  _buildInfoRow('Przebieg', '${vehicle.mileage} km'),
+                _buildInfoRow('Data', _formatDate(fuelLog.date)),
+                _buildInfoRow('Przebieg', '${fuelLog.mileage} km'),
+                _buildInfoRow('Paliwo', '${numberFormat.format(fuelLog.fuelAmount)} L'),
+                _buildInfoRow('Koszt', '${numberFormat.format(fuelLog.totalCost)} zł'),
+                if (fuelLog.notes != null && fuelLog.notes!.isNotEmpty)
+                  _buildInfoRow('Notatki', fuelLog.notes!),
               ],
             ),
             const SizedBox(height: 16),
@@ -71,31 +78,19 @@ class VehicleDetailScreen extends ConsumerWidget {
               'Szczegóły',
               Icons.description_outlined,
               [
-                _buildInfoRow('Utworzono', _formatDate(vehicle.createdAt)),
-                _buildInfoRow('Zaktualizowano', _formatDate(vehicle.updatedAt)),
+                _buildInfoRow('Utworzono', _formatDate(fuelLog.createdAt)),
+                _buildInfoRow('Zaktualizowano', _formatDate(fuelLog.updatedAt)),
               ],
             ),
             const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () => context.push('/vehicles/$id/fuel-logs'),
-              icon: const Icon(Icons.local_gas_station),
-              label: const Text('Tankowania'),
-            ),
-            const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: () => context.push('/vehicles/$id/edit'),
+              onPressed: () => context.push('/vehicles/$vehicleId/fuel-logs/$id/edit'),
               icon: const Icon(Icons.edit),
-              label: const Text('Edytuj pojazd'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () => context.push('/vehicles/$id/fuel-logs'),
-              icon: const Icon(Icons.local_gas_station),
-              label: const Text('Tankowania'),
+              label: const Text('Edytuj tankowanie'),
             ),
           ],
         );
-      case VehicleDetailStatus.error:
+      case FuelLogDetailStatus.error:
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -113,19 +108,25 @@ class VehicleDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: () => ref.read(vehicleDetailNotifierProvider(id)).loadVehicle(id),
+                onPressed: () =>
+                    ref.read(fuelLogDetailNotifierProvider((vehicleId, id))).loadFuelLog(id),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Spróbuj ponownie'),
               ),
             ],
           ),
         );
-      case VehicleDetailStatus.initial:
+      case FuelLogDetailStatus.initial:
         return const Center(child: CircularProgressIndicator());
     }
   }
 
-  Widget _buildInfoCard(BuildContext context, String title, IconData icon, List<Widget> children) {
+  Widget _buildInfoCard(
+    BuildContext context,
+    String title,
+    IconData icon,
+    List<Widget> children,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -174,15 +175,15 @@ class VehicleDetailScreen extends ConsumerWidget {
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day}.${date.month}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year.toString().substring(2)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Usuń pojazd'),
-        content: const Text('Czy na pewno chcesz usunąć ten pojazd?'),
+        title: const Text('Usuń tankowanie'),
+        content: const Text('Czy na pewno chcesz usunąć to tankowanie?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -191,7 +192,7 @@ class VehicleDetailScreen extends ConsumerWidget {
           FilledButton(
             onPressed: () async {
               Navigator.of(context).pop(true);
-              await ref.read(vehicleDetailNotifierProvider(id)).deleteVehicle(id);
+              await ref.read(fuelLogDetailNotifierProvider((vehicleId, id))).deleteFuelLog(id);
               if (context.mounted) {
                 context.pop();
               }

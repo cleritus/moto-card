@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../presentation/providers/auth_provider.dart';
+import '../../presentation/screens/fuel_log_detail_screen.dart';
+import '../../presentation/screens/fuel_log_form_screen.dart';
+import '../../presentation/screens/fuel_log_list_screen.dart';
 import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/login_screen.dart';
 import '../../presentation/screens/register_screen.dart';
@@ -52,6 +55,40 @@ final routerProvider = Provider<GoRouter>((ref) {
                   final id = state.pathParameters['id']!;
                   return VehicleFormScreen(id: id);
                 },
+              ),
+              GoRoute(
+                path: 'fuel-logs',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return FuelLogListScreen(vehicleId: id);
+                },
+                routes: [
+                  GoRoute(
+                    path: ':logId',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      final logId = state.pathParameters['logId']!;
+                      return FuelLogDetailScreen(vehicleId: id, id: logId);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final logId = state.pathParameters['logId']!;
+                          return FuelLogFormScreen(vehicleId: id, id: logId);
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return FuelLogFormScreen(vehicleId: id);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
