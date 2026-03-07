@@ -6,14 +6,17 @@ import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/datasources/vehicle_remote_data_source.dart';
 import '../../data/datasources/fuel_log_remote_data_source.dart';
 import '../../data/datasources/service_log_remote_data_source.dart';
+import '../../data/datasources/reminder_remote_data_source.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/vehicle_repository_impl.dart';
 import '../../data/repositories/fuel_log_repository_impl.dart';
 import '../../data/repositories/service_log_repository_impl.dart';
+import '../../data/repositories/reminder_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/vehicle_repository.dart';
 import '../../domain/repositories/fuel_log_repository.dart';
 import '../../domain/repositories/service_log_repository.dart';
+import '../../domain/repositories/reminder_repository.dart';
 
 final secureStorageProvider = Provider<FlutterSecureStorage>(
   (ref) => const FlutterSecureStorage(),
@@ -70,12 +73,12 @@ final serviceLogRepositoryProvider = Provider<ServiceLogRepository>((ref) {
   return ServiceLogRepositoryImpl(dataSource: dataSource);
 });
 
-final serviceLogRemoteDataSourceProvider = Provider<ServiceLogRemoteDataSource>((ref) {
+final reminderRemoteDataSourceProvider = Provider<ReminderRemoteDataSource>((ref) {
   final dio = ref.watch(dioProvider);
-  return ServiceLogRemoteDataSource(dio: dio);
+  return ReminderRemoteDataSource(dio: dio);
 });
 
-final serviceLogRepositoryProvider = Provider<ServiceLogRepository>((ref) {
-  final dataSource = ref.watch(serviceLogRemoteDataSourceProvider);
-  return ServiceLogRepositoryImpl(dataSource: dataSource);
+final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
+  final dataSource = ref.watch(reminderRemoteDataSourceProvider);
+  return ReminderRepositoryImpl(dataSource: dataSource);
 });

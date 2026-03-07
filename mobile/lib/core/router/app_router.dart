@@ -10,6 +10,9 @@ import '../../presentation/screens/register_screen.dart';
 import '../../presentation/screens/service_log_detail_screen.dart';
 import '../../presentation/screens/service_log_form_screen.dart';
 import '../../presentation/screens/service_log_list_screen.dart';
+import '../../presentation/screens/reminder_detail_screen.dart';
+import '../../presentation/screens/reminder_form_screen.dart';
+import '../../presentation/screens/reminder_list_screen.dart';
 import '../../presentation/screens/vehicle_list_screen.dart';
 import '../../presentation/screens/vehicle_detail_screen.dart';
 import '../../presentation/screens/vehicle_form_screen.dart';
@@ -123,6 +126,40 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) {
                       final id = state.pathParameters['id']!;
                       return ServiceLogFormScreen(vehicleId: id);
+                    },
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'reminders',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return ReminderListScreen(vehicleId: id);
+                },
+                routes: [
+                  GoRoute(
+                    path: ':reminderId',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      final reminderId = state.pathParameters['reminderId']!;
+                      return ReminderDetailScreen(vehicleId: id, id: reminderId);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          final reminderId = state.pathParameters['reminderId']!;
+                          return ReminderFormScreen(vehicleId: id, id: reminderId);
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return ReminderFormScreen(vehicleId: id);
                     },
                   ),
                 ],

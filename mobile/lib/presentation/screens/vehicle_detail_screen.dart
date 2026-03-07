@@ -87,6 +87,12 @@ class VehicleDetailScreen extends ConsumerWidget {
               icon: const Icon(Icons.build),
               label: const Text('Serwisy'),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/vehicles/$id/reminders'),
+              icon: const Icon(Icons.notifications),
+              label: const Text('Przypomnienia'),
+            ),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: () => context.push('/vehicles/$id/edit'),
