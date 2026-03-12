@@ -28,6 +28,7 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
 
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -135,6 +136,23 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final providerKey = widget.id ?? 'new';
+    ref.listen<ServiceLogDetailState>(serviceLogDetailProvider((widget.vehicleId, providerKey)), (previous, next) {
+      if (next.status == ServiceLogDetailStatus.error && next.errorMessage != null) {
+        setState(() {
+          _errorMessage = next.errorMessage;
+          _isLoading = false;
+        });
+      } else if (next.status == ServiceLogDetailStatus.loaded && _isLoading) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = null;
+          });
+          context.pop();
+        }
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.id != null ? 'Edytuj serwis' : 'Nowy serwis'),
@@ -256,6 +274,15 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 24),
+                if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 FilledButton(
                   onPressed: _isLoading ? null : _submit,
                   child: _isLoading

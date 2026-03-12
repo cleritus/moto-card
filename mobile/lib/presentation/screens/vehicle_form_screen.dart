@@ -23,6 +23,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
   final _mileageController = TextEditingController();
 
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -100,6 +101,24 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final providerKey = widget.id ?? 'new';
+    ref.listen<VehicleDetailState>(vehicleDetailProvider(providerKey), (previous, next) {
+      if (next.status == VehicleDetailStatus.error && next.errorMessage != null) {
+        setState(() {
+          _errorMessage = next.errorMessage;
+          _isLoading = false;
+        });
+      } else if (next.status == VehicleDetailStatus.loaded && _isLoading) {
+        // Clear error and close form after successful submit
+        if (mounted) {
+          setState(() {
+            _errorMessage = null;
+          });
+          context.pop();
+        }
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.id != null ? 'Edytuj pojazd' : 'Nowy pojazd'),
@@ -204,6 +223,15 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                   },
                 ),
                 const SizedBox(height: 24),
+                if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 FilledButton(
                   onPressed: _isLoading ? null : _submit,
                   child: _isLoading

@@ -235,10 +235,10 @@ class _ReminderListItem extends ConsumerWidget {
         });
       },
       background: Container(
-        color: Colors.red,
+        color: Theme.of(context).colorScheme.error,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
       ),
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -303,11 +303,11 @@ class _ReminderListItem extends ConsumerWidget {
 
   Color _getDueColor(BuildContext context, Reminder reminder) {
     if (reminder.isCompleted) return Theme.of(context).colorScheme.primary;
-    if (reminder.dueDate == null) return Colors.grey;
+    if (reminder.dueDate == null) return Theme.of(context).colorScheme.onSurfaceVariant;
     final now = DateTime.now();
     final diff = reminder.dueDate!.difference(now).inDays;
-    if (diff < 0) return Colors.red;
-    if (diff <= 7) return Colors.orange;
-    return Colors.grey;
+    if (diff < 0) return Theme.of(context).colorScheme.error;
+    if (diff <= 7) return Theme.of(context).colorScheme.primary;
+    return Theme.of(context).colorScheme.onSurfaceVariant;
   }
 }

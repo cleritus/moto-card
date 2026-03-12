@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/service_log_provider.dart';
+import '../utils/date_utils.dart' as app_date_utils;
+import '../widgets/delete_confirmation_dialog.dart';
+import '../widgets/info_card.dart';
+import '../widgets/info_row.dart';
 
 class ServiceLogDetailScreen extends ConsumerWidget {
   final String vehicleId;
@@ -56,47 +60,43 @@ class ServiceLogDetailScreen extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _buildInfoCard(
-              context,
-              'Informacje',
-              Icons.build,
-              [
-                _buildInfoRow('Data', _formatDate(serviceLog.date)),
-                _buildInfoRow('Typ serwisu', serviceLog.serviceType),
-                _buildInfoRow('Przebieg', '${serviceLog.mileage} km'),
-                _buildInfoRow('Koszt', '${serviceLog.totalCost.toStringAsFixed(2)} zł'),
+            InfoCard(
+              title: 'Informacje',
+              icon: Icons.build,
+              children: [
+                InfoRow(label: 'Data', value: app_date_utils.DateUtils.formatDateTime(serviceLog.date)),
+                InfoRow(label: 'Typ serwisu', value: serviceLog.serviceType),
+                InfoRow(label: 'Przebieg', value: '${serviceLog.mileage} km'),
+                InfoRow(label: 'Koszt', value: '${serviceLog.totalCost.toStringAsFixed(2)} zł'),
                 if (serviceLog.mechanic != null && serviceLog.mechanic!.isNotEmpty)
-                  _buildInfoRow('Mechanik', serviceLog.mechanic!),
+                  InfoRow(label: 'Mechanik', value: serviceLog.mechanic!),
               ],
             ),
             const SizedBox(height: 16),
             if (serviceLog.description != null && serviceLog.description!.isNotEmpty)
-              _buildInfoCard(
-                context,
-                'Opis',
-                Icons.description,
-                [
-                  _buildInfoRow('', serviceLog.description!, wrap: true),
+              InfoCard(
+                title: 'Opis',
+                icon: Icons.description,
+                children: [
+                  InfoRow(label: '', value: serviceLog.description!, wrap: true),
                 ],
               ),
             const SizedBox(height: 16),
             if (serviceLog.notes != null && serviceLog.notes!.isNotEmpty)
-              _buildInfoCard(
-                context,
-                'Notatki',
-                Icons.note,
-                [
-                  _buildInfoRow('', serviceLog.notes!, wrap: true),
+              InfoCard(
+                title: 'Notatki',
+                icon: Icons.note,
+                children: [
+                  InfoRow(label: '', value: serviceLog.notes!, wrap: true),
                 ],
               ),
             const SizedBox(height: 16),
-            _buildInfoCard(
-              context,
-              'Szczegóły',
-              Icons.description_outlined,
-              [
-                _buildInfoRow('Utworzono', _formatDate(serviceLog.createdAt)),
-                _buildInfoRow('Zaktualizowano', _formatDate(serviceLog.updatedAt)),
+            InfoCard(
+              title: 'Szczegóły',
+              icon: Icons.description_outlined,
+              children: [
+                InfoRow(label: 'Utworzono', value: app_date_utils.DateUtils.formatDateTime(serviceLog.createdAt)),
+                InfoRow(label: 'Zaktualizowano', value: app_date_utils.DateUtils.formatDateTime(serviceLog.updatedAt)),
               ],
             ),
             const SizedBox(height: 16),
@@ -138,91 +138,18 @@ class ServiceLogDetailScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildInfoCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    List<Widget> children,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            const Divider(),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, {bool wrap = false}) {
-    if (wrap) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(value),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year.toString().substring(2)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Usuń serwis'),
-        content: const Text('Czy na pewno chcesz usunąć ten serwis?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Anuluj'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.of(context).pop(true);
-              await ref.read(serviceLogDetailNotifierProvider((vehicleId, id))).deleteServiceLog(id);
-              if (context.mounted) {
-                context.pop();
-              }
-            },
-            child: const Text('Usuń'),
-          ),
-        ],
+      builder: (context) => DeleteConfirmationDialog(
+        title: 'Usuń serwis',
+        message: 'Czy na pewno chcesz usunąć ten serwis?',
+        onConfirm: () async {
+          await ref.read(serviceLogDetailNotifierProvider((vehicleId, id))).deleteServiceLog(id);
+          if (context.mounted) {
+            context.pop();
+          }
+        },
       ),
     );
   }

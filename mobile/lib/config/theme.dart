@@ -28,6 +28,25 @@ class AppTheme {
           secondary: AppColors.darkSecondary,
           onSurface: AppColors.darkOnSurface,
         ),
+        textTheme: const TextTheme(
+          headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          bodyMedium: TextStyle(fontSize: 14),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: ButtonStyle(
+            padding: WidgetStateProperty.all<EdgeInsets>(
+              const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          filled: true,
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+        ),
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.darkSurface,
           foregroundColor: AppColors.darkOnBackground,
@@ -54,6 +73,25 @@ class AppTheme {
           primary: AppColors.lightPrimary,
           secondary: AppColors.lightSecondary,
           onSurface: AppColors.lightOnSurface,
+        ),
+        textTheme: const TextTheme(
+          headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          bodyMedium: TextStyle(fontSize: 14),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: ButtonStyle(
+            padding: WidgetStateProperty.all<EdgeInsets>(
+              const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          filled: true,
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.lightSurface,

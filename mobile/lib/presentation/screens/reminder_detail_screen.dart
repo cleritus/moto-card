@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../domain/entities/reminder.dart';
 import '../providers/reminder_provider.dart';
+import '../utils/date_utils.dart' as app_date_utils;
+import '../widgets/delete_confirmation_dialog.dart';
+import '../widgets/info_card.dart';
+import '../widgets/info_row.dart';
 
 class ReminderDetailScreen extends ConsumerWidget {
   final String vehicleId;
@@ -55,7 +58,6 @@ class ReminderDetailScreen extends ConsumerWidget {
           return const Center(child: Text('Przypomnienie nie zostało znalezione'));
         }
         final reminder = state.reminder!;
-        final dateFormatter = DateFormat('dd.MM.yyyy');
         final isOverdue = reminder.type == ReminderType.date &&
             reminder.dueDate != null &&
             !reminder.isCompleted &&
@@ -66,44 +68,41 @@ class ReminderDetailScreen extends ConsumerWidget {
           children: [
             _buildCompletionCard(context, ref, reminder),
             const SizedBox(height: 16),
-            _buildInfoCard(
-              context,
-              'Informacje',
-              reminder.type == ReminderType.date ? Icons.event : Icons.speed,
-              [
-                _buildInfoRow('Tytuł', reminder.title),
-                _buildInfoRow('Typ', reminder.type == ReminderType.date ? 'Data' : 'Przebieg'),
+            InfoCard(
+              title: 'Informacje',
+              icon: reminder.type == ReminderType.date ? Icons.event : Icons.speed,
+              children: [
+                InfoRow(label: 'Tytuł', value: reminder.title),
+                InfoRow(label: 'Typ', value: reminder.type == ReminderType.date ? 'Data' : 'Przebieg'),
                 if (reminder.type == ReminderType.date && reminder.dueDate != null)
-                  _buildInfoRow(
-                    'Data przypomnienia',
-                    dateFormatter.format(reminder.dueDate!),
+                  InfoRow(
+                    label: 'Data przypomnienia',
+                    value: app_date_utils.DateUtils.formatDate(reminder.dueDate!),
                     isOverdue: isOverdue,
                   ),
                 if (reminder.type == ReminderType.mileage && reminder.dueMileage != null)
-                  _buildInfoRow('Przebieg', '${reminder.dueMileage} km'),
-                _buildInfoRow('Status', reminder.isCompleted ? 'Ukończone' : 'Aktywne'),
+                  InfoRow(label: 'Przebieg', value: '${reminder.dueMileage} km'),
+                InfoRow(label: 'Status', value: reminder.isCompleted ? 'Ukończone' : 'Aktywne'),
                 if (reminder.isCompleted && reminder.completedAt != null)
-                  _buildInfoRow('Ukończono', _formatDate(reminder.completedAt!)),
+                  InfoRow(label: 'Ukończono', value: app_date_utils.DateUtils.formatDateTime(reminder.completedAt!)),
               ],
             ),
             const SizedBox(height: 16),
             if (reminder.notes != null && reminder.notes!.isNotEmpty)
-              _buildInfoCard(
-                context,
-                'Notatki',
-                Icons.note,
-                [
-                  _buildInfoRow('', reminder.notes!, wrap: true),
+              InfoCard(
+                title: 'Notatki',
+                icon: Icons.note,
+                children: [
+                  InfoRow(label: '', value: reminder.notes!, wrap: true),
                 ],
               ),
             const SizedBox(height: 16),
-            _buildInfoCard(
-              context,
-              'Szczegóły',
-              Icons.description_outlined,
-              [
-                _buildInfoRow('Utworzono', _formatDate(reminder.createdAt)),
-                _buildInfoRow('Zaktualizowano', _formatDate(reminder.updatedAt)),
+            InfoCard(
+              title: 'Szczegóły',
+              icon: Icons.description_outlined,
+              children: [
+                InfoRow(label: 'Utworzono', value: app_date_utils.DateUtils.formatDateTime(reminder.createdAt)),
+                InfoRow(label: 'Zaktualizowano', value: app_date_utils.DateUtils.formatDateTime(reminder.updatedAt)),
               ],
             ),
             const SizedBox(height: 16),
@@ -199,101 +198,18 @@ class ReminderDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    List<Widget> children,
-  ) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            const Divider(),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, {bool wrap = false, bool isOverdue = false}) {
-    if (wrap) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(
-          value,
-          style: TextStyle(
-            color: isOverdue ? Colors.red : null,
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                color: isOverdue ? Colors.red : null,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year.toString().substring(2)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Usuń przypomnienie'),
-        content: const Text('Czy na pewno chcesz usunąć to przypomnienie?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Anuluj'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.of(context).pop(true);
-              await ref.read(reminderDetailNotifierProvider((vehicleId, id))).deleteReminder(id);
-              if (context.mounted) {
-                context.pop();
-              }
-            },
-            child: const Text('Usuń'),
-          ),
-        ],
+      builder: (context) => DeleteConfirmationDialog(
+        title: 'Usuń przypomnienie',
+        message: 'Czy na pewno chcesz usunąć to przypomnienie?',
+        onConfirm: () async {
+          await ref.read(reminderDetailNotifierProvider((vehicleId, id))).deleteReminder(id);
+          if (context.mounted) {
+            context.pop();
+          }
+        },
       ),
     );
   }
