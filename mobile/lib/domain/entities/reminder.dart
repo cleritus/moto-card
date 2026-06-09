@@ -46,19 +46,22 @@ class Reminder {
         updatedAt: DateTime.parse(json['updatedAt'] as String),
       );
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'vehicleId': vehicleId,
-        'title': title,
-        'type': type.name,
-        'dueDate': dueDate?.toIso8601String(),
-        'dueMileage': dueMileage,
-        'isCompleted': isCompleted,
-        'completedAt': completedAt?.toIso8601String(),
-        'notes': notes,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'id': id,
+      'vehicleId': vehicleId,
+      'title': title,
+      'type': type.name,
+      'isCompleted': isCompleted,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+    if (dueDate != null) map['dueDate'] = dueDate!.toIso8601String();
+    if (dueMileage != null) map['dueMileage'] = dueMileage;
+    if (completedAt != null) map['completedAt'] = completedAt!.toIso8601String();
+    if (notes != null) map['notes'] = notes;
+    return map;
+  }
 
   Reminder copyWith({
     String? id,
