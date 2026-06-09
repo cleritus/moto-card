@@ -44,6 +44,8 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
   }
 
   Future<void> _loadVehicle() async {
+    final notifier = ref.read(vehicleDetailNotifierProvider(widget.id!));
+    await notifier.loadVehicle(widget.id!);
     final state = ref.read(vehicleDetailProvider(widget.id!));
     if (state.vehicle != null) {
       final vehicle = state.vehicle!;
@@ -80,14 +82,32 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
 
       Future(() async {
         try {
+          final providerKey = widget.id ?? 'new';
+          final notifier = ref.read(vehicleDetailNotifierProvider(providerKey));
+
           if (widget.id != null) {
-            await ref
-                .read(vehicleDetailNotifierProvider(widget.id!))
-                .updateVehicle(vehicle);
+            await notifier.updateVehicle(vehicle);
+            final state = ref.read(vehicleDetailProvider(widget.id!));
+            if (state.status == VehicleDetailStatus.error) {
+              setState(() {
+                _errorMessage = state.errorMessage;
+                _isLoading = false;
+              });
+              return;
+            }
           } else {
-            await ref.read(vehicleDetailNotifierProvider('new')).createVehicle(vehicle);
+            await notifier.createVehicle(vehicle);
+            final state = ref.read(vehicleDetailProvider('new'));
+            if (state.status == VehicleDetailStatus.error) {
+              setState(() {
+                _errorMessage = state.errorMessage;
+                _isLoading = false;
+              });
+              return;
+            }
           }
           if (mounted) {
+            ref.read(vehicleListProvider.notifier).refresh();
             context.pop();
           }
         } finally {
@@ -101,23 +121,24 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final providerKey = widget.id ?? 'new';
-    ref.listen<VehicleDetailState>(vehicleDetailProvider(providerKey), (previous, next) {
-      if (next.status == VehicleDetailStatus.error && next.errorMessage != null) {
-        setState(() {
-          _errorMessage = next.errorMessage;
-          _isLoading = false;
-        });
-      } else if (next.status == VehicleDetailStatus.loaded && _isLoading) {
-        // Clear error and close form after successful submit
-        if (mounted) {
+    // Only watch provider for edit mode, not create mode
+    if (widget.id != null) {
+      ref.listen<VehicleDetailState>(vehicleDetailProvider(widget.id!), (previous, next) {
+        // Handle error from loading or updating
+        if (next.status == VehicleDetailStatus.error && next.errorMessage != null) {
           setState(() {
-            _errorMessage = null;
+            _errorMessage = next.errorMessage;
+            _isLoading = false;
           });
-          context.pop();
+        } else if (next.status == VehicleDetailStatus.loaded && _isLoading) {
+          if (mounted) {
+            setState(() => _errorMessage = null);
+            ref.read(vehicleListProvider.notifier).refresh();
+            context.pop();
+          }
         }
-      }
-    });
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(

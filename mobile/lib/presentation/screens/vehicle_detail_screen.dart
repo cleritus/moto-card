@@ -24,6 +24,13 @@ class VehicleDetailScreen extends ConsumerWidget {
       }
     });
 
+    // Load vehicle on first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (state.status == VehicleDetailStatus.initial) {
+        ref.read(vehicleDetailNotifierProvider(id)).loadVehicle(id);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: Text(state.vehicle?.name ?? 'Pojazd'),
@@ -142,6 +149,7 @@ class VehicleDetailScreen extends ConsumerWidget {
         onConfirm: () async {
           await ref.read(vehicleDetailNotifierProvider(id)).deleteVehicle(id);
           if (context.mounted) {
+            ref.read(vehicleListProvider.notifier).refresh();
             context.pop();
           }
         },

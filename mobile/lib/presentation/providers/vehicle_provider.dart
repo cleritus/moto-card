@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/exceptions/app_exception.dart';
 import '../../domain/entities/vehicle.dart';
 import '../../domain/repositories/vehicle_repository.dart';
+import 'auth_provider.dart';
 import 'providers.dart';
 
 enum VehicleListStatus { initial, loading, loaded, error }
@@ -31,8 +32,9 @@ class VehicleListState {
 
 class VehicleListNotifier extends StateNotifier<VehicleListState> {
   final VehicleRepository _repository;
+  final Ref _ref;
 
-  VehicleListNotifier(this._repository) : super(const VehicleListState()) {
+  VehicleListNotifier(this._repository, this._ref) : super(const VehicleListState()) {
     loadVehicles();
   }
 
@@ -44,6 +46,8 @@ class VehicleListNotifier extends StateNotifier<VehicleListState> {
         status: VehicleListStatus.loaded,
         vehicles: vehicles,
       );
+    } on AuthException catch (_) {
+      _ref.read(authProvider.notifier).logout();
     } on AppException catch (e) {
       state = state.copyWith(status: VehicleListStatus.error, errorMessage: e.message);
     } catch (e) {
@@ -62,7 +66,7 @@ class VehicleListNotifier extends StateNotifier<VehicleListState> {
 
 final vehicleListProvider = StateNotifierProvider<VehicleListNotifier, VehicleListState>((ref) {
   final repository = ref.watch(vehicleRepositoryProvider);
-  return VehicleListNotifier(repository);
+  return VehicleListNotifier(repository, ref);
 });
 
 enum VehicleDetailStatus { initial, loading, loaded, error }
@@ -164,7 +168,7 @@ class VehicleDetailNotifier extends StateNotifier<VehicleDetailState> {
 final vehicleDetailProvider =
     StateNotifierProvider.family<VehicleDetailNotifier, VehicleDetailState, String>((ref, id) {
   final repository = ref.watch(vehicleRepositoryProvider);
-  return VehicleDetailNotifier(repository)..loadVehicle(id);
+  return VehicleDetailNotifier(repository);
 });
 
 final vehicleDetailNotifierProvider =

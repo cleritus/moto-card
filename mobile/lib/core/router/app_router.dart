@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../presentation/providers/auth_provider.dart';
@@ -17,15 +18,22 @@ import '../../presentation/screens/vehicle_list_screen.dart';
 import '../../presentation/screens/vehicle_detail_screen.dart';
 import '../../presentation/screens/vehicle_form_screen.dart';
 
+class _AuthListenable extends ChangeNotifier {
+  _AuthListenable(Ref ref) {
+    ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  final authListenable = _AuthListenable(ref);
 
   return GoRouter(
     initialLocation: '/login',
+    refreshListenable: authListenable,
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
       final isAuthenticated = authState.status == AuthStatus.authenticated;
       final isAuthRoute = state.matchedLocation == '/login' || state.matchedLocation == '/register';
-      final isVehicleRoute = state.matchedLocation.startsWith('/vehicles');
 
       if (!isAuthenticated && !isAuthRoute) return '/login';
       if (isAuthenticated && isAuthRoute) return '/vehicles';
@@ -49,6 +57,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const VehicleListScreen(),
         routes: [
           GoRoute(
+            path: 'new',
+            builder: (context, state) => const VehicleFormScreen(),
+          ),
+          GoRoute(
             path: ':id',
             builder: (context, state) {
               final id = state.pathParameters['id']!;
@@ -70,6 +82,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 },
                 routes: [
                   GoRoute(
+                    path: 'new',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return FuelLogFormScreen(vehicleId: id);
+                    },
+                  ),
+                  GoRoute(
                     path: ':logId',
                     builder: (context, state) {
                       final id = state.pathParameters['id']!;
@@ -87,13 +106,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                       ),
                     ],
                   ),
-                  GoRoute(
-                    path: 'new',
-                    builder: (context, state) {
-                      final id = state.pathParameters['id']!;
-                      return FuelLogFormScreen(vehicleId: id);
-                    },
-                  ),
                 ],
               ),
               GoRoute(
@@ -103,6 +115,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                   return ServiceLogListScreen(vehicleId: id);
                 },
                 routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return ServiceLogFormScreen(vehicleId: id);
+                    },
+                  ),
                   GoRoute(
                     path: ':logId',
                     builder: (context, state) {
@@ -121,13 +140,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                       ),
                     ],
                   ),
-                  GoRoute(
-                    path: 'new',
-                    builder: (context, state) {
-                      final id = state.pathParameters['id']!;
-                      return ServiceLogFormScreen(vehicleId: id);
-                    },
-                  ),
                 ],
               ),
               GoRoute(
@@ -137,6 +149,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                   return ReminderListScreen(vehicleId: id);
                 },
                 routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return ReminderFormScreen(vehicleId: id);
+                    },
+                  ),
                   GoRoute(
                     path: ':reminderId',
                     builder: (context, state) {
@@ -155,20 +174,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                       ),
                     ],
                   ),
-                  GoRoute(
-                    path: 'new',
-                    builder: (context, state) {
-                      final id = state.pathParameters['id']!;
-                      return ReminderFormScreen(vehicleId: id);
-                    },
-                  ),
                 ],
               ),
             ],
-          ),
-          GoRoute(
-            path: 'new',
-            builder: (context, state) => const VehicleFormScreen(),
           ),
         ],
       ),

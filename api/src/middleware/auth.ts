@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { verifyAccessToken, TokenPayload } from '../utils/jwt';
 import { createError } from './errorHandler';
 
@@ -30,6 +31,10 @@ export const authenticate = async (
     req.user = payload;
     next();
   } catch (error) {
-    next(error);
+    if (error instanceof jwt.JsonWebTokenError) {
+      next(createError('Invalid or expired token', 401));
+    } else {
+      next(error);
+    }
   }
 };
