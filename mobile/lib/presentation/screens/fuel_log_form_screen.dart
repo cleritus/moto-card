@@ -105,12 +105,29 @@ class _FuelLogFormScreenState extends ConsumerState<FuelLogFormScreen> {
             await ref
                 .read(fuelLogDetailNotifierProvider((widget.vehicleId, widget.id!)))
                 .updateFuelLog(fuelLog);
+            final state = ref.read(fuelLogDetailProvider((widget.vehicleId, widget.id!)));
+            if (state.status == FuelLogDetailStatus.error) {
+              setState(() {
+                _errorMessage = state.errorMessage;
+                _isLoading = false;
+              });
+              return;
+            }
           } else {
             await ref
                 .read(fuelLogDetailNotifierProvider((widget.vehicleId, 'new')))
                 .createFuelLog(fuelLog);
+            final state = ref.read(fuelLogDetailProvider((widget.vehicleId, 'new')));
+            if (state.status == FuelLogDetailStatus.error) {
+              setState(() {
+                _errorMessage = state.errorMessage;
+                _isLoading = false;
+              });
+              return;
+            }
           }
           if (mounted) {
+            ref.read(fuelLogListProvider(widget.vehicleId).notifier).refresh();
             context.pop();
           }
         } finally {
@@ -133,9 +150,8 @@ class _FuelLogFormScreenState extends ConsumerState<FuelLogFormScreen> {
         });
       } else if (next.status == FuelLogDetailStatus.loaded && _isLoading) {
         if (mounted) {
-          setState(() {
-            _errorMessage = null;
-          });
+          setState(() => _errorMessage = null);
+          ref.read(fuelLogListProvider(widget.vehicleId).notifier).refresh();
           context.pop();
         }
       }

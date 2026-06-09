@@ -205,8 +205,11 @@ class ReminderDetailScreen extends ConsumerWidget {
         title: 'Usuń przypomnienie',
         message: 'Czy na pewno chcesz usunąć to przypomnienie?',
         onConfirm: () async {
+          final isCompleted = ref.read(reminderDetailProvider((vehicleId, id))).reminder?.isCompleted ?? false;
           await ref.read(reminderDetailNotifierProvider((vehicleId, id))).deleteReminder(id);
           if (context.mounted) {
+            final filter = isCompleted ? ReminderFilter.completed : ReminderFilter.active;
+            ref.read(reminderListProvider((vehicleId, filter)).notifier).refresh();
             context.pop();
           }
         },

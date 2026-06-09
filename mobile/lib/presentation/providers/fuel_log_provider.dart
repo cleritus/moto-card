@@ -205,7 +205,9 @@ final fuelLogDetailProvider =
     )>(
   (ref, params) {
     final repository = ref.watch(fuelLogRepositoryProvider);
-    return FuelLogDetailNotifier(repository, params.$1)..loadFuelLog(params.$2);
+    final notifier = FuelLogDetailNotifier(repository, params.$1);
+    if (params.$2 != 'new') notifier.loadFuelLog(params.$2);
+    return notifier;
   },
 );
 

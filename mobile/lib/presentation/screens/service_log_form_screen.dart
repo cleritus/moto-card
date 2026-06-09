@@ -117,12 +117,29 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
             await ref
                 .read(serviceLogDetailNotifierProvider((widget.vehicleId, widget.id!)))
                 .updateServiceLog(serviceLog);
+            final state = ref.read(serviceLogDetailProvider((widget.vehicleId, widget.id!)));
+            if (state.status == ServiceLogDetailStatus.error) {
+              setState(() {
+                _errorMessage = state.errorMessage;
+                _isLoading = false;
+              });
+              return;
+            }
           } else {
             await ref
                 .read(serviceLogDetailNotifierProvider((widget.vehicleId, 'new')))
                 .createServiceLog(serviceLog);
+            final state = ref.read(serviceLogDetailProvider((widget.vehicleId, 'new')));
+            if (state.status == ServiceLogDetailStatus.error) {
+              setState(() {
+                _errorMessage = state.errorMessage;
+                _isLoading = false;
+              });
+              return;
+            }
           }
           if (mounted) {
+            ref.read(serviceLogListProvider(widget.vehicleId).notifier).refresh();
             context.pop();
           }
         } finally {
@@ -145,9 +162,8 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
         });
       } else if (next.status == ServiceLogDetailStatus.loaded && _isLoading) {
         if (mounted) {
-          setState(() {
-            _errorMessage = null;
-          });
+          setState(() => _errorMessage = null);
+          ref.read(serviceLogListProvider(widget.vehicleId).notifier).refresh();
           context.pop();
         }
       }

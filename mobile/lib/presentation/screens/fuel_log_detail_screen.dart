@@ -132,6 +132,7 @@ class FuelLogDetailScreen extends ConsumerWidget {
         onConfirm: () async {
           await ref.read(fuelLogDetailNotifierProvider((vehicleId, id))).deleteFuelLog(id);
           if (context.mounted) {
+            ref.read(fuelLogListProvider(vehicleId).notifier).refresh();
             context.pop();
           }
         },

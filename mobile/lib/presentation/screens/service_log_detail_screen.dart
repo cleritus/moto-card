@@ -147,6 +147,7 @@ class ServiceLogDetailScreen extends ConsumerWidget {
         onConfirm: () async {
           await ref.read(serviceLogDetailNotifierProvider((vehicleId, id))).deleteServiceLog(id);
           if (context.mounted) {
+            ref.read(serviceLogListProvider(vehicleId).notifier).refresh();
             context.pop();
           }
         },

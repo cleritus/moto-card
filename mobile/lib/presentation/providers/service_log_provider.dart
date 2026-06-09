@@ -205,7 +205,9 @@ final serviceLogDetailProvider =
     )>(
   (ref, params) {
     final repository = ref.watch(serviceLogRepositoryProvider);
-    return ServiceLogDetailNotifier(repository, params.$1)..loadServiceLog(params.$2);
+    final notifier = ServiceLogDetailNotifier(repository, params.$1);
+    if (params.$2 != 'new') notifier.loadServiceLog(params.$2);
+    return notifier;
   },
 );
 

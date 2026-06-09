@@ -238,7 +238,9 @@ final reminderDetailProvider =
     )>(
   (ref, params) {
     final repository = ref.watch(reminderRepositoryProvider);
-    return ReminderDetailNotifier(repository, params.$1)..loadReminder(params.$2);
+    final notifier = ReminderDetailNotifier(repository, params.$1);
+    if (params.$2 != 'new') notifier.loadReminder(params.$2);
+    return notifier;
   },
 );
 

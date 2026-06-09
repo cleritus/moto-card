@@ -148,12 +148,29 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
             await ref
                 .read(reminderDetailNotifierProvider((widget.vehicleId, widget.id!)))
                 .updateReminder(reminder);
+            final state = ref.read(reminderDetailProvider((widget.vehicleId, widget.id!)));
+            if (state.status == ReminderDetailStatus.error) {
+              setState(() {
+                _errorMessage = state.errorMessage;
+                _isLoading = false;
+              });
+              return;
+            }
           } else {
             await ref
                 .read(reminderDetailNotifierProvider((widget.vehicleId, 'new')))
                 .createReminder(reminder);
+            final state = ref.read(reminderDetailProvider((widget.vehicleId, 'new')));
+            if (state.status == ReminderDetailStatus.error) {
+              setState(() {
+                _errorMessage = state.errorMessage;
+                _isLoading = false;
+              });
+              return;
+            }
           }
           if (mounted) {
+            ref.read(reminderListProvider((widget.vehicleId, ReminderFilter.active)).notifier).refresh();
             context.pop();
           }
         } finally {
@@ -176,9 +193,8 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
         });
       } else if (next.status == ReminderDetailStatus.loaded && _isLoading) {
         if (mounted) {
-          setState(() {
-            _errorMessage = null;
-          });
+          setState(() => _errorMessage = null);
+          ref.read(reminderListProvider((widget.vehicleId, ReminderFilter.active)).notifier).refresh();
           context.pop();
         }
       }
