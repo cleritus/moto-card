@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/theme.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -35,44 +36,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final theme = Theme.of(context);
+    final isLoading = authState.status == AuthStatus.loading;
 
     ref.listen<AuthState>(authProvider, (previous, next) {
-      if (previous?.status != AuthStatus.authenticated && next.status == AuthStatus.authenticated) {
+      if (previous?.status != AuthStatus.authenticated &&
+          next.status == AuthStatus.authenticated) {
         context.go('/home');
       }
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Logowanie')),
+      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.motorcycle,
-                    size: 80,
-                    color: theme.colorScheme.primary,
+                    size: 64,
+                    color: AppColors.darkPrimary,
                   ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Moto Service Card',
-                    style: theme.textTheme.headlineMedium,
+                  const SizedBox(height: 24),
+                  const Text(
+                    'MOTO SERVICE CARD',
                     textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 4,
+                      color: AppColors.darkOnBackground,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Container(
+                      width: 64,
+                      height: 3,
+                      color: AppColors.darkPrimary,
+                    ),
                   ),
                   const SizedBox(height: 48),
+                  const _FieldLabel('Email'),
+                  const SizedBox(height: 8),
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: Icon(Icons.email),
-                    ),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     validator: (value) {
@@ -81,50 +93,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  const _FieldLabel('Hasło'),
+                  const SizedBox(height: 8),
                   TextFormField(
                     controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'Hasło',
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                    ),
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _submit(),
+                    decoration: InputDecoration(
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: AppColors.darkLabel,
+                        ),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                      ),
+                    ),
                     validator: (value) {
                       if (value == null || value.isEmpty) return 'Podaj hasło';
-                      if (value.length < 6) return 'Hasło musi mieć minimum 6 znaków';
+                      if (value.length < 6) {
+                        return 'Hasło musi mieć minimum 6 znaków';
+                      }
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
                   if (authState.errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
                         authState.errorMessage!,
-                        style: const TextStyle(color: Colors.red),
+                        style: const TextStyle(color: AppColors.darkAccent),
                         textAlign: TextAlign.center,
                       ),
                     ),
                   FilledButton(
-                    onPressed: authState.status == AuthStatus.loading ? null : _submit,
-                    child: authState.status == AuthStatus.loading
+                    onPressed: isLoading ? null : _submit,
+                    child: isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.darkOnPrimary,
+                            ),
                           )
-                        : const Text('Zaloguj się'),
+                        : const Text('ZALOGUJ'),
                   ),
                   const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () => context.go('/register'),
-                    child: const Text('Nie masz konta? Zarejestruj się'),
+                  OutlinedButton(
+                    onPressed: isLoading ? null : () => context.go('/register'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.darkOnBackground,
+                      side: const BorderSide(color: AppColors.darkBorder),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.zero,
+                      ),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    child: const Text('ZAREJESTRUJ SIĘ'),
                   ),
                 ],
               ),
@@ -134,4 +170,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+}
+
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 10,
+          letterSpacing: 2,
+          fontWeight: FontWeight.bold,
+          color: AppColors.darkLabel,
+        ),
+      );
 }
