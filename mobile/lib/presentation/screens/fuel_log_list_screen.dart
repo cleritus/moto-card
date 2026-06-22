@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../domain/entities/fuel_log.dart';
 import '../providers/fuel_log_provider.dart';
+import '../utils/date_utils.dart' as app_date_utils;
+import '../widgets/data_list_tile.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/section_header.dart';
 
 class FuelLogListScreen extends ConsumerWidget {
   final String vehicleId;
@@ -14,7 +18,8 @@ class FuelLogListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(fuelLogListProvider(vehicleId));
 
-    ref.listen<FuelLogListState>(fuelLogListProvider(vehicleId), (previous, next) {
+    ref.listen<FuelLogListState>(fuelLogListProvider(vehicleId),
+        (previous, next) {
       if (next.status == FuelLogListStatus.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.errorMessage ?? 'Wystąpił błąd')),
@@ -23,15 +28,7 @@ class FuelLogListScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tankowania'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(fuelLogListProvider(vehicleId).notifier).refresh(),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('TANKOWANIE')),
       body: _buildBody(context, ref, state),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/vehicles/$vehicleId/fuel-logs/new'),
@@ -40,46 +37,35 @@ class FuelLogListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, FuelLogListState state) {
+  Widget _buildBody(
+      BuildContext context, WidgetRef ref, FuelLogListState state) {
     switch (state.status) {
       case FuelLogListStatus.loading:
+      case FuelLogListStatus.initial:
         return const Center(child: CircularProgressIndicator());
       case FuelLogListStatus.loaded:
         if (state.fuelLogs.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.local_gas_station_outlined,
-                  size: 80,
-                  color: Theme.of(context).colorScheme.onSurface.withAlpha(77),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Brak tankowań',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Dodaj swoje pierwsze tankowanie',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                      ),
-                ),
-              ],
-            ),
+          return const EmptyState(
+            icon: Icons.local_gas_station,
+            title: 'Brak tankowań',
+            subtitle: 'Dodaj swoje pierwsze tankowanie',
           );
         }
+        final consumptions = _consumptionById(state.fuelLogs);
         return RefreshIndicator(
-          onRefresh: () => ref.read(fuelLogListProvider(vehicleId).notifier).refresh(),
+          onRefresh: () =>
+              ref.read(fuelLogListProvider(vehicleId).notifier).refresh(),
           child: ListView.builder(
-            itemCount: state.fuelLogs.length,
+            padding: const EdgeInsets.only(bottom: 80),
+            itemCount: state.fuelLogs.length + 1,
             itemBuilder: (context, index) {
-              final fuelLog = state.fuelLogs[index];
-              return _FuelLogListItem(vehicleId: vehicleId, fuelLog: fuelLog);
+              if (index == 0) return const SectionHeader('Historia tankowań');
+              final fuelLog = state.fuelLogs[index - 1];
+              return _FuelLogListItem(
+                vehicleId: vehicleId,
+                fuelLog: fuelLog,
+                consumption: consumptions[fuelLog.id],
+              );
             },
           ),
         );
@@ -88,11 +74,8 @@ class FuelLogListScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
-              ),
+              Icon(Icons.error_outline,
+                  size: 64, color: Theme.of(context).colorScheme.error),
               const SizedBox(height: 16),
               Text(
                 state.errorMessage ?? 'Wystąpił błąd',
@@ -101,30 +84,44 @@ class FuelLogListScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: () => ref.read(fuelLogListProvider(vehicleId).notifier).refresh(),
+                onPressed: () =>
+                    ref.read(fuelLogListProvider(vehicleId).notifier).refresh(),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Spróbuj ponownie'),
+                label: const Text('SPRÓBUJ PONOWNIE'),
               ),
             ],
           ),
         );
-      case FuelLogListStatus.initial:
-        return const Center(child: CircularProgressIndicator());
     }
+  }
+
+  /// Per-entry L/100km using the previous fill-up (sorted by mileage).
+  Map<String, double> _consumptionById(List<FuelLog> logs) {
+    final sorted = [...logs]..sort((a, b) => a.mileage.compareTo(b.mileage));
+    final result = <String, double>{};
+    for (var i = 1; i < sorted.length; i++) {
+      final distance = sorted[i].mileage - sorted[i - 1].mileage;
+      if (distance > 0) {
+        result[sorted[i].id] = sorted[i].fuelAmount / distance * 100;
+      }
+    }
+    return result;
   }
 }
 
 class _FuelLogListItem extends ConsumerWidget {
   final String vehicleId;
   final FuelLog fuelLog;
+  final double? consumption;
 
-  const _FuelLogListItem({required this.vehicleId, required this.fuelLog});
+  const _FuelLogListItem({
+    required this.vehicleId,
+    required this.fuelLog,
+    this.consumption,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dateFormatter = DateFormat('dd.MM.yy');
-    final numberFormat = NumberFormat.decimalPattern('pl_PL');
-
     return Dismissible(
       key: Key(fuelLog.id),
       direction: DismissDirection.endToStart,
@@ -133,7 +130,8 @@ class _FuelLogListItem extends ConsumerWidget {
               context: context,
               builder: (context) => AlertDialog(
                 title: const Text('Usuń tankowanie'),
-                content: const Text('Czy na pewno chcesz usunąć to tankowanie?'),
+                content:
+                    const Text('Czy na pewno chcesz usunąć to tankowanie?'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
@@ -149,9 +147,8 @@ class _FuelLogListItem extends ConsumerWidget {
             false;
       },
       onDismissed: (_) {
-        ref
-            .read(fuelLogListProvider(vehicleId).notifier)
-            .clearError();
+        HapticFeedback.mediumImpact();
+        ref.read(fuelLogListProvider(vehicleId).notifier).clearError();
         ref
             .read(fuelLogDetailNotifierProvider((vehicleId, fuelLog.id)))
             .deleteFuelLog(fuelLog.id)
@@ -160,26 +157,22 @@ class _FuelLogListItem extends ConsumerWidget {
         });
       },
       background: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         color: Theme.of(context).colorScheme.error,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
         child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
       ),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-            child: Icon(
-              Icons.local_gas_station,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-          ),
-          title: Text('${numberFormat.format(fuelLog.fuelAmount)} L'),
-          subtitle: Text('${dateFormatter.format(fuelLog.date)} • ${fuelLog.mileage} km'),
-          trailing: Text('${numberFormat.format(fuelLog.totalCost)} zł'),
-          onTap: () => context.push('/vehicles/$vehicleId/fuel-logs/${fuelLog.id}'),
-        ),
+      child: DataListTile(
+        primary: '${fuelLog.fuelAmount.toStringAsFixed(1)} L',
+        secondary: '${fuelLog.mileage} km · '
+            '${app_date_utils.DateUtils.formatDate(fuelLog.date)}',
+        tertiary: consumption != null
+            ? '${consumption!.toStringAsFixed(1)} L/100km'
+            : null,
+        trailing: '${fuelLog.totalCost.toStringAsFixed(2)} zł',
+        onTap: () =>
+            context.push('/vehicles/$vehicleId/fuel-logs/${fuelLog.id}'),
       ),
     );
   }
