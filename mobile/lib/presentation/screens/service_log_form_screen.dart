@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../config/theme.dart';
 import '../../domain/entities/service_log.dart';
 import '../providers/service_log_provider.dart';
+import '../widgets/section_header.dart';
 
 class ServiceLogFormScreen extends ConsumerStatefulWidget {
   final String vehicleId;
@@ -171,16 +173,17 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.id != null ? 'Edytuj serwis' : 'Nowy serwis'),
+        title: Text(widget.id != null ? 'EDYTUJ SERWIS' : 'NOWY SERWIS'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SectionHeader('Dane podstawowe', padded: false),
                 TextFormField(
                   controller: _dateController,
                   decoration: const InputDecoration(
@@ -267,7 +270,7 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SectionHeader('Szczegóły', padded: false),
                 TextFormField(
                   controller: _descriptionController,
                   decoration: const InputDecoration(
@@ -295,7 +298,7 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: AppColors.darkAccent),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -305,14 +308,17 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.darkOnPrimary,
+                          ),
                         )
-                      : Text(widget.id != null ? 'Zapisz zmiany' : 'Dodaj serwis'),
+                      : Text(widget.id != null ? 'ZAPISZ ZMIANY' : 'DODAJ SERWIS'),
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton(
                   onPressed: _isLoading ? null : () => context.pop(),
-                  child: const Text('Anuluj'),
+                  child: const Text('ANULUJ'),
                 ),
               ],
             ),

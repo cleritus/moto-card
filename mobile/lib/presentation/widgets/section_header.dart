@@ -3,13 +3,16 @@ import '../../config/theme.dart';
 
 /// An uppercase red section title with a decorative line filling the row.
 class SectionHeader extends StatelessWidget {
-  const SectionHeader(this.title, {super.key});
+  const SectionHeader(this.title, {super.key, this.padded = true});
 
   final String title;
 
+  /// When false, drops the horizontal padding (use inside already-padded forms).
+  final bool padded;
+
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+        padding: EdgeInsets.fromLTRB(padded ? 16 : 0, 20, padded ? 16 : 0, 12),
         child: Row(
           children: [
             Text(

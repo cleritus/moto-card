@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/theme.dart';
 import '../../domain/entities/vehicle.dart';
 import '../providers/vehicle_provider.dart';
+import '../widgets/section_header.dart';
 
 class VehicleFormScreen extends ConsumerStatefulWidget {
   final String? id;
@@ -142,16 +144,17 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.id != null ? 'Edytuj pojazd' : 'Nowy pojazd'),
+        title: Text(widget.id != null ? 'EDYTUJ POJAZD' : 'NOWY POJAZD'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SectionHeader('Dane podstawowe', padded: false),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
@@ -223,7 +226,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SectionHeader('Szczegóły', padded: false),
                 TextFormField(
                   controller: _mileageController,
                   decoration: const InputDecoration(
@@ -249,7 +252,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                     padding: const EdgeInsets.only(bottom: 16),
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: AppColors.darkAccent),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -259,14 +262,17 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.darkOnPrimary,
+                          ),
                         )
-                      : Text(widget.id != null ? 'Zapisz zmiany' : 'Dodaj pojazd'),
+                      : Text(widget.id != null ? 'ZAPISZ ZMIANY' : 'DODAJ POJAZD'),
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton(
                   onPressed: _isLoading ? null : () => context.pop(),
-                  child: const Text('Anuluj'),
+                  child: const Text('ANULUJ'),
                 ),
               ],
             ),
