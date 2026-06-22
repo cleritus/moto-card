@@ -15,7 +15,7 @@ import '../../presentation/screens/reminder_detail_screen.dart';
 import '../../presentation/screens/reminder_form_screen.dart';
 import '../../presentation/screens/reminder_list_screen.dart';
 import '../../presentation/screens/vehicle_list_screen.dart';
-import '../../presentation/screens/vehicle_detail_screen.dart';
+import '../../presentation/screens/vehicle_shell_screen.dart';
 import '../../presentation/screens/vehicle_form_screen.dart';
 
 class _AuthListenable extends ChangeNotifier {
@@ -64,7 +64,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: ':id',
             builder: (context, state) {
               final id = state.pathParameters['id']!;
-              return VehicleDetailScreen(id: id);
+              return VehicleShellScreen(vehicleId: id);
             },
             routes: [
               GoRoute(
