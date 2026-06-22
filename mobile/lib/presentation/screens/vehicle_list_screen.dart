@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/theme.dart';
 import '../../domain/entities/vehicle.dart';
+import '../providers/auth_provider.dart';
 import '../providers/vehicle_provider.dart';
+import '../widgets/data_list_tile.dart';
 
 class VehicleListScreen extends ConsumerWidget {
   const VehicleListScreen({super.key});
@@ -21,11 +25,12 @@ class VehicleListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Moje Pojazdy'),
+        title: const Text('GARAGE'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(vehicleListProvider.notifier).refresh(),
+            icon: const Icon(Icons.logout_outlined),
+            tooltip: 'Wyloguj',
+            onPressed: () => ref.read(authProvider.notifier).logout(),
           ),
         ],
       ),
@@ -37,42 +42,20 @@ class VehicleListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, VehicleListState state) {
+  Widget _buildBody(
+      BuildContext context, WidgetRef ref, VehicleListState state) {
     switch (state.status) {
       case VehicleListStatus.loading:
+      case VehicleListStatus.initial:
         return const Center(child: CircularProgressIndicator());
       case VehicleListStatus.loaded:
         if (state.vehicles.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.motorcycle_outlined,
-                  size: 80,
-                  color: Theme.of(context).colorScheme.onSurface.withAlpha(77),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Brak pojazdów',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Dodaj swój pierwszy pojazd',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                      ),
-                ),
-              ],
-            ),
-          );
+          return const _EmptyState();
         }
         return RefreshIndicator(
           onRefresh: () => ref.read(vehicleListProvider.notifier).refresh(),
           child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: state.vehicles.length,
             itemBuilder: (context, index) {
               final vehicle = state.vehicles[index];
@@ -98,17 +81,52 @@ class VehicleListScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: () => ref.read(vehicleListProvider.notifier).refresh(),
+                onPressed: () =>
+                    ref.read(vehicleListProvider.notifier).refresh(),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Spróbuj ponownie'),
+                label: const Text('SPRÓBUJ PONOWNIE'),
               ),
             ],
           ),
         );
-      case VehicleListStatus.initial:
-        return const Center(child: CircularProgressIndicator());
     }
   }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.two_wheeler,
+              size: 80,
+              color: AppColors.darkBorder,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'BRAK POJAZDÓW',
+              style: TextStyle(
+                fontSize: 16,
+                letterSpacing: 2,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkLabel,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Dodaj swój pierwszy pojazd',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.darkOnSurface.withAlpha(153),
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _VehicleListItem extends ConsumerWidget {
@@ -126,8 +144,7 @@ class _VehicleListItem extends ConsumerWidget {
               context: context,
               builder: (context) => AlertDialog(
                 title: const Text('Usuń pojazd'),
-                content: Text(
-                    'Czy na pewno chcesz usunąć ${vehicle.name}?'),
+                content: Text('Czy na pewno chcesz usunąć ${vehicle.name}?'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
@@ -143,33 +160,29 @@ class _VehicleListItem extends ConsumerWidget {
             false;
       },
       onDismissed: (_) {
+        HapticFeedback.mediumImpact();
         ref.read(vehicleListProvider.notifier).clearError();
-        ref.read(vehicleDetailNotifierProvider(vehicle.id)).deleteVehicle(vehicle.id).then((_) {
+        ref
+            .read(vehicleDetailNotifierProvider(vehicle.id))
+            .deleteVehicle(vehicle.id)
+            .then((_) {
           ref.read(vehicleListProvider.notifier).refresh();
         });
       },
       background: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         color: Theme.of(context).colorScheme.error,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
         child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
       ),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: ListTile(
-          leading: CircleAvatar(
-            child: Text(
-              vehicle.make.substring(0, 1).toUpperCase(),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          title: Text(vehicle.name),
-          subtitle: Text('${vehicle.make} ${vehicle.vehicleModel} • ${vehicle.year}'),
-          trailing: vehicle.mileage != null
-              ? Text('${vehicle.mileage} km')
-              : null,
-          onTap: () => context.push('/vehicles/${vehicle.id}'),
-        ),
+      child: DataListTile(
+        primary: vehicle.name,
+        secondary:
+            '${vehicle.make} ${vehicle.vehicleModel} · ${vehicle.year}'
+                .toUpperCase(),
+        trailing: vehicle.mileage != null ? '${vehicle.mileage} km' : null,
+        onTap: () => context.push('/vehicles/${vehicle.id}'),
       ),
     );
   }
