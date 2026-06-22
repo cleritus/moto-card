@@ -31,7 +31,7 @@ class FuelLogDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tankowanie'),
+        title: const Text('TANKOWANIE'),
         actions: [
           if (state.fuelLog != null)
             IconButton(
@@ -88,7 +88,7 @@ class FuelLogDetailScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: () => context.push('/vehicles/$vehicleId/fuel-logs/$id/edit'),
               icon: const Icon(Icons.edit),
-              label: const Text('Edytuj tankowanie'),
+              label: const Text('EDYTUJ TANKOWANIE'),
             ),
           ],
         );
@@ -113,7 +113,7 @@ class FuelLogDetailScreen extends ConsumerWidget {
                 onPressed: () =>
                     ref.read(fuelLogDetailNotifierProvider((vehicleId, id))).loadFuelLog(id),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Spróbuj ponownie'),
+                label: const Text('SPRÓBUJ PONOWNIE'),
               ),
             ],
           ),

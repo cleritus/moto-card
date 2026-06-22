@@ -30,7 +30,7 @@ class ServiceLogDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Serwis'),
+        title: const Text('SERWIS'),
         actions: [
           if (state.serviceLog != null)
             IconButton(
@@ -103,7 +103,7 @@ class ServiceLogDetailScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: () => context.push('/vehicles/$vehicleId/service-logs/$id/edit'),
               icon: const Icon(Icons.edit),
-              label: const Text('Edytuj serwis'),
+              label: const Text('EDYTUJ SERWIS'),
             ),
           ],
         );
@@ -128,7 +128,7 @@ class ServiceLogDetailScreen extends ConsumerWidget {
                 onPressed: () =>
                     ref.read(serviceLogDetailNotifierProvider((vehicleId, id))).loadServiceLog(id),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Spróbuj ponownie'),
+                label: const Text('SPRÓBUJ PONOWNIE'),
               ),
             ],
           ),

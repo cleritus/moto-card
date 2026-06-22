@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/theme.dart';
 import '../../domain/entities/reminder.dart';
 import '../providers/reminder_provider.dart';
 import '../utils/date_utils.dart' as app_date_utils;
@@ -31,7 +32,7 @@ class ReminderDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Przypomnienie'),
+        title: const Text('PRZYPOMNIENIE'),
         actions: [
           if (state.reminder != null)
             IconButton(
@@ -109,7 +110,7 @@ class ReminderDetailScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: () => context.push('/vehicles/$vehicleId/reminders/$id/edit'),
               icon: const Icon(Icons.edit),
-              label: const Text('Edytuj przypomnienie'),
+              label: const Text('EDYTUJ PRZYPOMNIENIE'),
             ),
           ],
         );
@@ -134,7 +135,7 @@ class ReminderDetailScreen extends ConsumerWidget {
                 onPressed: () =>
                     ref.read(reminderDetailNotifierProvider((vehicleId, id))).loadReminder(id),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Spróbuj ponownie'),
+                label: const Text('SPRÓBUJ PONOWNIE'),
               ),
             ],
           ),
@@ -150,52 +151,81 @@ class ReminderDetailScreen extends ConsumerWidget {
         !reminder.isCompleted &&
         reminder.dueDate!.isBefore(DateTime.now());
 
-    return Card(
-      color: isOverdue
-          ? Theme.of(context).colorScheme.errorContainer
-          : reminder.isCompleted
-              ? Theme.of(context).colorScheme.primaryContainer
-              : null,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(
-              isOverdue ? Icons.warning : (reminder.isCompleted ? Icons.check_circle : Icons.pending),
-              size: 48,
-              color: isOverdue
-                  ? Theme.of(context).colorScheme.error
-                  : (reminder.isCompleted
-                      ? Theme.of(context).colorScheme.primary
-                      : null),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isOverdue
-                  ? 'Po terminie'
-                  : (reminder.isCompleted ? 'Ukończone' : 'Oczekujące'),
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            if (!isOverdue) ...[
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () {
-                  if (reminder.isCompleted) {
-                    ref.read(reminderDetailNotifierProvider((vehicleId, id))).markAsIncomplete(id);
-                  } else {
-                    ref.read(reminderDetailNotifierProvider((vehicleId, id))).markAsCompleted(id);
-                  }
-                },
-                icon: Icon(reminder.isCompleted ? Icons.undo : Icons.check_circle),
-                label: Text(reminder.isCompleted ? 'Cofnij ukończenie' : 'Oznacz jako ukończone'),
+    final Color accent;
+    final IconData icon;
+    final String label;
+    if (reminder.isCompleted) {
+      accent = Colors.green;
+      icon = Icons.check_circle;
+      label = 'UKOŃCZONE';
+    } else if (isOverdue) {
+      accent = AppColors.darkPrimary;
+      icon = Icons.warning_amber_rounded;
+      label = 'PO TERMINIE';
+    } else {
+      accent = AppColors.darkLabel;
+      icon = Icons.pending_outlined;
+      label = 'OCZEKUJĄCE';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: accent.withAlpha(30),
+        border: Border.all(color: accent),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: accent, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.bold,
+                  color: accent,
+                ),
               ),
             ],
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              style: reminder.isCompleted
+                  ? FilledButton.styleFrom(
+                      backgroundColor: AppColors.darkSurfaceBright,
+                      foregroundColor: AppColors.darkOnBackground,
+                    )
+                  : null,
+              onPressed: () async {
+                final notifier =
+                    ref.read(reminderDetailNotifierProvider((vehicleId, id)));
+                if (reminder.isCompleted) {
+                  await notifier.markAsIncomplete(id);
+                } else {
+                  await notifier.markAsCompleted(id);
+                }
+                _refreshLists(ref);
+              },
+              child: Text(
+                reminder.isCompleted ? 'COFNIJ' : 'OZNACZ JAKO UKOŃCZONE',
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  void _refreshLists(WidgetRef ref) {
+    for (final filter in ReminderFilter.values) {
+      ref.read(reminderListProvider((vehicleId, filter)).notifier).refresh();
+    }
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
