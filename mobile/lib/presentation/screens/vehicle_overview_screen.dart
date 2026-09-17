@@ -5,6 +5,7 @@ import '../../config/theme.dart';
 import '../../domain/entities/fuel_log.dart';
 import '../../domain/entities/reminder.dart';
 import '../providers/fuel_log_provider.dart';
+import '../providers/providers.dart';
 import '../providers/reminder_provider.dart';
 import '../providers/service_log_provider.dart';
 import '../providers/vehicle_provider.dart';
@@ -93,6 +94,12 @@ class VehicleOverviewScreen extends ConsumerWidget {
         final consumption = _averageConsumption(fuelLogs);
         final activeReminders = reminderState.reminders;
         final nextReminder = _nextReminder(activeReminders);
+
+        if (vehicle.mileage != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _checkMileageReminders(ref, activeReminders, vehicle.mileage!);
+          });
+        }
 
         return RefreshIndicator(
           onRefresh: () async {
@@ -248,6 +255,22 @@ class VehicleOverviewScreen extends ConsumerWidget {
     }
     if (consumptions.isEmpty) return null;
     return consumptions.reduce((a, b) => a + b) / consumptions.length;
+  }
+
+  void _checkMileageReminders(
+    WidgetRef ref,
+    List<Reminder> reminders,
+    int currentMileage,
+  ) {
+    final notificationService = ref.read(notificationServiceProvider);
+    for (final reminder in reminders) {
+      if (reminder.type == ReminderType.mileage) {
+        notificationService.checkMileageReminder(
+          reminder: reminder,
+          currentMileage: currentMileage,
+        );
+      }
+    }
   }
 
   Reminder? _nextReminder(List<Reminder> reminders) {

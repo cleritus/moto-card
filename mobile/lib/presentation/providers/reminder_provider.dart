@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/exceptions/app_exception.dart';
+import '../../core/notifications/notification_service.dart';
 import '../../domain/entities/reminder.dart';
 import '../../domain/repositories/reminder_repository.dart';
 import 'providers.dart';
@@ -114,10 +115,14 @@ class ReminderDetailState {
 
 class ReminderDetailNotifier extends StateNotifier<ReminderDetailState> {
   final ReminderRepository _repository;
+  final NotificationService _notificationService;
   final String _vehicleId;
 
-  ReminderDetailNotifier(this._repository, this._vehicleId)
-      : super(const ReminderDetailState());
+  ReminderDetailNotifier(
+    this._repository,
+    this._notificationService,
+    this._vehicleId,
+  ) : super(const ReminderDetailState());
 
   Future<void> loadReminder(String id) async {
     state = state.copyWith(status: ReminderDetailStatus.loading, errorMessage: null);
@@ -144,6 +149,7 @@ class ReminderDetailNotifier extends StateNotifier<ReminderDetailState> {
     state = state.copyWith(status: ReminderDetailStatus.loading, errorMessage: null);
     try {
       final createdReminder = await _repository.createReminder(_vehicleId, reminder);
+      await _notificationService.scheduleForReminder(createdReminder);
       state = state.copyWith(
         status: ReminderDetailStatus.loaded,
         reminder: createdReminder,
@@ -165,6 +171,7 @@ class ReminderDetailNotifier extends StateNotifier<ReminderDetailState> {
     state = state.copyWith(status: ReminderDetailStatus.loading, errorMessage: null);
     try {
       final updatedReminder = await _repository.updateReminder(_vehicleId, reminder);
+      await _notificationService.scheduleForReminder(updatedReminder);
       state = state.copyWith(
         status: ReminderDetailStatus.loaded,
         reminder: updatedReminder,
@@ -186,6 +193,7 @@ class ReminderDetailNotifier extends StateNotifier<ReminderDetailState> {
     state = state.copyWith(status: ReminderDetailStatus.loading, errorMessage: null);
     try {
       await _repository.deleteReminder(_vehicleId, id);
+      await _notificationService.cancelForReminder(id);
       state = const ReminderDetailState(status: ReminderDetailStatus.loaded);
     } on AppException catch (e) {
       state = state.copyWith(
@@ -203,6 +211,7 @@ class ReminderDetailNotifier extends StateNotifier<ReminderDetailState> {
   Future<void> markAsCompleted(String id) async {
     try {
       final reminder = await _repository.markAsCompleted(_vehicleId, id);
+      await _notificationService.cancelForReminder(id);
       if (state.status == ReminderDetailStatus.loaded && state.reminder?.id == id) {
         state = state.copyWith(reminder: reminder);
       }
@@ -214,6 +223,7 @@ class ReminderDetailNotifier extends StateNotifier<ReminderDetailState> {
   Future<void> markAsIncomplete(String id) async {
     try {
       final reminder = await _repository.markAsIncomplete(_vehicleId, id);
+      await _notificationService.scheduleForReminder(reminder);
       if (state.status == ReminderDetailStatus.loaded && state.reminder?.id == id) {
         state = state.copyWith(reminder: reminder);
       }
@@ -238,7 +248,8 @@ final reminderDetailProvider =
     )>(
   (ref, params) {
     final repository = ref.watch(reminderRepositoryProvider);
-    final notifier = ReminderDetailNotifier(repository, params.$1);
+    final notificationService = ref.watch(notificationServiceProvider);
+    final notifier = ReminderDetailNotifier(repository, notificationService, params.$1);
     if (params.$2 != 'new') notifier.loadReminder(params.$2);
     return notifier;
   },

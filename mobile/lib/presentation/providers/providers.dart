@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/notifications/notification_service.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/datasources/vehicle_remote_data_source.dart';
 import '../../data/datasources/fuel_log_remote_data_source.dart';
@@ -21,6 +22,11 @@ import '../../domain/repositories/reminder_repository.dart';
 final secureStorageProvider = Provider<FlutterSecureStorage>(
   (ref) => const FlutterSecureStorage(),
 );
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  final storage = ref.watch(secureStorageProvider);
+  return NotificationService(secureStorage: storage);
+});
 
 final dioClientProvider = Provider<DioClient>((ref) {
   final storage = ref.watch(secureStorageProvider);
