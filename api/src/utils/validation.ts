@@ -87,6 +87,21 @@ export const validateVehicleCreate: ValidationChain[] = [
     .isInt({ min: 0 })
     .withMessage('Mileage must be a positive number')
     .toInt(),
+  body('licensePlate')
+    .notEmpty()
+    .withMessage('License plate is required')
+    .trim(),
+  body('vin')
+    .optional()
+    .trim(),
+  body('purchaseDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Please enter a valid date')
+    .toDate(),
+  body('notes')
+    .optional()
+    .trim(),
   handleValidationErrors as unknown as ValidationChain,
 ];
 
@@ -117,6 +132,22 @@ export const validateVehicleUpdate: ValidationChain[] = [
     .isInt({ min: 0 })
     .withMessage('Mileage must be a positive number')
     .toInt(),
+  body('licensePlate')
+    .optional()
+    .notEmpty()
+    .withMessage('License plate cannot be empty')
+    .trim(),
+  body('vin')
+    .optional()
+    .trim(),
+  body('purchaseDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Please enter a valid date')
+    .toDate(),
+  body('notes')
+    .optional()
+    .trim(),
   handleValidationErrors as unknown as ValidationChain,
 ];
 

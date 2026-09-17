@@ -56,15 +56,15 @@ export const vehicleController = {
    */
   createVehicle: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    const { name, make, vehicleModel, year, mileage } = req.body;
+    const { name, make, vehicleModel, year, mileage, licensePlate, vin, purchaseDate, notes } = req.body;
 
     if (!userId) {
       throw createError('User not authenticated', 401);
     }
 
     // Validation
-    if (!name || !make || !vehicleModel || !year) {
-      throw createError('Name, make, model, and year are required', 400);
+    if (!name || !make || !vehicleModel || !year || !licensePlate) {
+      throw createError('Name, make, model, year, and license plate are required', 400);
     }
 
     const vehicle = await vehicleService.createVehicle(userId, {
@@ -73,6 +73,10 @@ export const vehicleController = {
       vehicleModel,
       year: parseInt(year, 10),
       mileage: mileage ? parseInt(mileage, 10) : undefined,
+      licensePlate,
+      vin: vin || undefined,
+      purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
+      notes: notes || undefined,
     });
 
     res.status(201).json({
@@ -88,7 +92,7 @@ export const vehicleController = {
   updateVehicle: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
-    const { name, make, vehicleModel, year, mileage } = req.body;
+    const { name, make, vehicleModel, year, mileage, licensePlate, vin, purchaseDate, notes } = req.body;
 
     if (!userId) {
       throw createError('User not authenticated', 401);
@@ -99,12 +103,26 @@ export const vehicleController = {
     }
 
     // Build update data (only include defined fields)
-    const updateData: { name?: string; make?: string; vehicleModel?: string; year?: number; mileage?: number } = {};
+    const updateData: {
+      name?: string;
+      make?: string;
+      vehicleModel?: string;
+      year?: number;
+      mileage?: number;
+      licensePlate?: string;
+      vin?: string;
+      purchaseDate?: Date;
+      notes?: string;
+    } = {};
     if (name !== undefined) updateData.name = name;
     if (make !== undefined) updateData.make = make;
     if (vehicleModel !== undefined) updateData.vehicleModel = vehicleModel;
     if (year !== undefined) updateData.year = parseInt(year, 10);
     if (mileage !== undefined) updateData.mileage = parseInt(mileage, 10);
+    if (licensePlate !== undefined) updateData.licensePlate = licensePlate;
+    if (vin !== undefined) updateData.vin = vin;
+    if (purchaseDate !== undefined) updateData.purchaseDate = new Date(purchaseDate);
+    if (notes !== undefined) updateData.notes = notes;
 
     const vehicle = await vehicleService.updateVehicle(userId, id, updateData);
 

@@ -8,6 +8,7 @@ import '../providers/fuel_log_provider.dart';
 import '../providers/reminder_provider.dart';
 import '../providers/service_log_provider.dart';
 import '../providers/vehicle_provider.dart';
+import '../utils/date_utils.dart' as app_date_utils;
 import '../widgets/data_list_tile.dart';
 import '../widgets/info_card.dart';
 import '../widgets/info_row.dart';
@@ -213,6 +214,17 @@ class VehicleOverviewScreen extends ConsumerWidget {
                   InfoRow(label: 'Marka', value: vehicle.make),
                   InfoRow(label: 'Model', value: vehicle.vehicleModel),
                   InfoRow(label: 'Rok', value: vehicle.year.toString()),
+                  InfoRow(label: 'Nr rejestracyjny', value: vehicle.licensePlate),
+                  if (vehicle.vin != null)
+                    InfoRow(label: 'VIN', value: vehicle.vin!),
+                  if (vehicle.purchaseDate != null)
+                    InfoRow(
+                      label: 'Data zakupu',
+                      value: app_date_utils.DateUtils.formatDate(
+                          vehicle.purchaseDate!),
+                    ),
+                  if (vehicle.notes != null)
+                    InfoRow(label: 'Notatki', value: vehicle.notes!),
                 ],
               ),
               const SizedBox(height: 16),

@@ -6,6 +6,10 @@ class Vehicle {
   final String vehicleModel;
   final int year;
   final int? mileage;
+  final String licensePlate;
+  final String? vin;
+  final DateTime? purchaseDate;
+  final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -17,6 +21,10 @@ class Vehicle {
     required this.vehicleModel,
     required this.year,
     this.mileage,
+    required this.licensePlate,
+    this.vin,
+    this.purchaseDate,
+    this.notes,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -29,21 +37,37 @@ class Vehicle {
         vehicleModel: json['vehicleModel'] as String,
         year: json['year'] as int,
         mileage: json['mileage'] as int?,
+        // Falls back to empty for vehicles created before this field existed.
+        licensePlate: json['licensePlate'] as String? ?? '',
+        vin: json['vin'] as String?,
+        purchaseDate: json['purchaseDate'] != null
+            ? DateTime.parse(json['purchaseDate'] as String)
+            : null,
+        notes: json['notes'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
       );
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'userId': userId,
-        'name': name,
-        'make': make,
-        'vehicleModel': vehicleModel,
-        'year': year,
-        'mileage': mileage,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'id': id,
+      'userId': userId,
+      'name': name,
+      'make': make,
+      'vehicleModel': vehicleModel,
+      'year': year,
+      'mileage': mileage,
+      'licensePlate': licensePlate,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+    if (vin != null) map['vin'] = vin;
+    if (purchaseDate != null) {
+      map['purchaseDate'] = purchaseDate!.toIso8601String();
+    }
+    if (notes != null) map['notes'] = notes;
+    return map;
+  }
 
   Vehicle copyWith({
     String? id,
@@ -53,6 +77,10 @@ class Vehicle {
     String? vehicleModel,
     int? year,
     int? mileage,
+    String? licensePlate,
+    String? vin,
+    DateTime? purchaseDate,
+    String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) =>
@@ -64,6 +92,10 @@ class Vehicle {
         vehicleModel: vehicleModel ?? this.vehicleModel,
         year: year ?? this.year,
         mileage: mileage ?? this.mileage,
+        licensePlate: licensePlate ?? this.licensePlate,
+        vin: vin ?? this.vin,
+        purchaseDate: purchaseDate ?? this.purchaseDate,
+        notes: notes ?? this.notes,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );

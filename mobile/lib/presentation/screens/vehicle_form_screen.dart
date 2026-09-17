@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../domain/entities/vehicle.dart';
 import '../providers/vehicle_provider.dart';
@@ -23,7 +24,12 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
   final _vehicleModelController = TextEditingController();
   final _yearController = TextEditingController();
   final _mileageController = TextEditingController();
+  final _licensePlateController = TextEditingController();
+  final _vinController = TextEditingController();
+  final _purchaseDateController = TextEditingController();
+  final _notesController = TextEditingController();
 
+  DateTime? _selectedPurchaseDate;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -31,7 +37,9 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
   void initState() {
     super.initState();
     if (widget.id != null) {
-      _loadVehicle();
+      // Deferred: loadVehicle() mutates provider state synchronously before
+      // its first await, which Riverpod forbids during a widget's build.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadVehicle());
     }
   }
 
@@ -42,6 +50,10 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
     _vehicleModelController.dispose();
     _yearController.dispose();
     _mileageController.dispose();
+    _licensePlateController.dispose();
+    _vinController.dispose();
+    _purchaseDateController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -58,6 +70,33 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
       if (vehicle.mileage != null) {
         _mileageController.text = vehicle.mileage.toString();
       }
+      _licensePlateController.text = vehicle.licensePlate;
+      if (vehicle.vin != null) {
+        _vinController.text = vehicle.vin!;
+      }
+      if (vehicle.purchaseDate != null) {
+        _selectedPurchaseDate = vehicle.purchaseDate;
+        _purchaseDateController.text =
+            DateFormat('dd.MM.yyyy').format(vehicle.purchaseDate!);
+      }
+      if (vehicle.notes != null) {
+        _notesController.text = vehicle.notes!;
+      }
+    }
+  }
+
+  Future<void> _selectPurchaseDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedPurchaseDate ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _selectedPurchaseDate = picked;
+        _purchaseDateController.text = DateFormat('dd.MM.yyyy').format(picked);
+      });
     }
   }
 
@@ -73,6 +112,14 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
         mileage: _mileageController.text.trim().isNotEmpty
             ? int.parse(_mileageController.text.trim())
             : null,
+        licensePlate: _licensePlateController.text.trim(),
+        vin: _vinController.text.trim().isEmpty
+            ? null
+            : _vinController.text.trim(),
+        purchaseDate: _selectedPurchaseDate,
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
         createdAt: widget.id != null
             ? ref.read(vehicleDetailProvider(widget.id!)).vehicle?.createdAt ??
                 DateTime.now()
@@ -226,6 +273,22 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _licensePlateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nr rejestracyjny',
+                    prefixIcon: Icon(Icons.badge),
+                    hintText: 'np. BI619X',
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Podaj numer rejestracyjny';
+                    }
+                    return null;
+                  },
+                ),
                 const SectionHeader('Szczegóły', padded: false),
                 TextFormField(
                   controller: _mileageController,
@@ -245,6 +308,38 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _vinController,
+                  decoration: const InputDecoration(
+                    labelText: 'VIN (opcjonalnie)',
+                    prefixIcon: Icon(Icons.pin),
+                    hintText: 'np. 1HD1GM4169K328789',
+                  ),
+                  textCapitalization: TextCapitalization.characters,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _purchaseDateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Data zakupu (opcjonalnie)',
+                    prefixIcon: Icon(Icons.calendar_today),
+                    hintText: 'dd.mm.rrrr',
+                  ),
+                  readOnly: true,
+                  onTap: _selectPurchaseDate,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _notesController,
+                  decoration: const InputDecoration(
+                    labelText: 'Notatki (opcjonalnie)',
+                    prefixIcon: Icon(Icons.note),
+                    hintText: 'np. znane modyfikacje',
+                  ),
+                  textCapitalization: TextCapitalization.sentences,
+                  maxLines: 3,
                 ),
                 const SizedBox(height: 24),
                 if (_errorMessage != null)

@@ -8,6 +8,10 @@ export interface IVehicle extends Document {
   vehicleModel: string;  // Renamed from 'model' to avoid conflict with Document.model
   year: number;
   mileage?: number;
+  licensePlate: string;
+  vin?: string;
+  purchaseDate?: Date;
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +59,28 @@ const VehicleSchema = new Schema<IVehicle, IVehicleModel>(
     mileage: {
       type: Number,
       min: [0, 'Mileage cannot be negative'],
+      default: undefined,
+    },
+    licensePlate: {
+      type: String,
+      required: [true, 'License plate is required'],
+      trim: true,
+      maxlength: [20, 'License plate cannot exceed 20 characters'],
+    },
+    vin: {
+      type: String,
+      trim: true,
+      maxlength: [30, 'VIN cannot exceed 30 characters'],
+      default: undefined,
+    },
+    purchaseDate: {
+      type: Date,
+      default: undefined,
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Notes cannot exceed 1000 characters'],
       default: undefined,
     },
   },
