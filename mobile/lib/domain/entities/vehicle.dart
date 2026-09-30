@@ -1,3 +1,5 @@
+import '../../core/utils/calendar_date.dart';
+
 class Vehicle {
   final String id;
   final String userId;
@@ -41,7 +43,7 @@ class Vehicle {
         licensePlate: json['licensePlate'] as String? ?? '',
         vin: json['vin'] as String?,
         purchaseDate: json['purchaseDate'] != null
-            ? DateTime.parse(json['purchaseDate'] as String)
+            ? parseCalendarDate(json['purchaseDate'] as String)
             : null,
         notes: json['notes'] as String?,
         createdAt: DateTime.parse(json['createdAt'] as String),
@@ -63,7 +65,7 @@ class Vehicle {
     };
     if (vin != null) map['vin'] = vin;
     if (purchaseDate != null) {
-      map['purchaseDate'] = purchaseDate!.toIso8601String();
+      map['purchaseDate'] = formatCalendarDate(purchaseDate!);
     }
     if (notes != null) map['notes'] = notes;
     return map;

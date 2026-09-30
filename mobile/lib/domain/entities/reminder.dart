@@ -1,3 +1,5 @@
+import '../../core/utils/calendar_date.dart';
+
 enum ReminderType { date, mileage }
 
 enum ReminderFilter { active, completed, all }
@@ -37,7 +39,7 @@ class Reminder {
           (e) => e.name == json['type'],
           orElse: () => ReminderType.date,
         ),
-        dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate'] as String) : null,
+        dueDate: json['dueDate'] != null ? parseCalendarDate(json['dueDate'] as String) : null,
         dueMileage: json['dueMileage'] as int?,
         isCompleted: json['isCompleted'] as bool,
         completedAt: json['completedAt'] != null ? DateTime.parse(json['completedAt'] as String) : null,
@@ -56,7 +58,7 @@ class Reminder {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
-    if (dueDate != null) map['dueDate'] = dueDate!.toIso8601String();
+    if (dueDate != null) map['dueDate'] = formatCalendarDate(dueDate!);
     if (dueMileage != null) map['dueMileage'] = dueMileage;
     if (completedAt != null) map['completedAt'] = completedAt!.toIso8601String();
     if (notes != null) map['notes'] = notes;

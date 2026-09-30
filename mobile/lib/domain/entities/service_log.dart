@@ -1,3 +1,5 @@
+import '../../core/utils/calendar_date.dart';
+
 class ServiceLog {
   final String id;
   final String vehicleId;
@@ -28,7 +30,7 @@ class ServiceLog {
   factory ServiceLog.fromJson(Map<String, dynamic> json) => ServiceLog(
         id: json['id'] as String,
         vehicleId: json['vehicleId'] as String,
-        date: DateTime.parse(json['date'] as String),
+        date: parseCalendarDate(json['date'] as String),
         mileage: json['mileage'] as int,
         serviceType: json['serviceType'] as String,
         description: json['description'] as String?,
@@ -42,7 +44,7 @@ class ServiceLog {
   Map<String, dynamic> toJson() => {
         'id': id,
         'vehicleId': vehicleId,
-        'date': date.toIso8601String(),
+        'date': formatCalendarDate(date),
         'mileage': mileage,
         'serviceType': serviceType,
         'description': description,

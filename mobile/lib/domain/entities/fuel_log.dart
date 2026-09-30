@@ -1,3 +1,5 @@
+import '../../core/utils/calendar_date.dart';
+
 class FuelLog {
   final String id;
   final String vehicleId;
@@ -24,7 +26,7 @@ class FuelLog {
   factory FuelLog.fromJson(Map<String, dynamic> json) => FuelLog(
         id: json['id'] as String,
         vehicleId: json['vehicleId'] as String,
-        date: DateTime.parse(json['date'] as String),
+        date: parseCalendarDate(json['date'] as String),
         mileage: json['mileage'] as int,
         fuelAmount: (json['fuelAmount'] as num).toDouble(),
         totalCost: (json['totalCost'] as num).toDouble(),
@@ -36,7 +38,7 @@ class FuelLog {
   Map<String, dynamic> toJson() => {
         'id': id,
         'vehicleId': vehicleId,
-        'date': date.toIso8601String(),
+        'date': formatCalendarDate(date),
         'mileage': mileage,
         'fuelAmount': fuelAmount,
         'totalCost': totalCost,
