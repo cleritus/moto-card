@@ -34,8 +34,9 @@ class VehicleListNotifier extends StateNotifier<VehicleListState> {
   final VehicleRepository _repository;
   final Ref _ref;
 
-  VehicleListNotifier(this._repository, this._ref) : super(const VehicleListState()) {
-    loadVehicles();
+  VehicleListNotifier(this._repository, this._ref, {required bool autoLoad})
+      : super(const VehicleListState()) {
+    if (autoLoad) loadVehicles();
   }
 
   Future<void> loadVehicles({int page = 1}) async {
@@ -47,6 +48,9 @@ class VehicleListNotifier extends StateNotifier<VehicleListState> {
         vehicles: vehicles,
       );
     } on AuthException catch (_) {
+      // Don't leave the list stuck on `loading`; logout() changes the user,
+      // which makes vehicleListProvider build a fresh notifier.
+      state = state.copyWith(status: VehicleListStatus.initial);
       _ref.read(authProvider.notifier).logout();
     } on AppException catch (e) {
       state = state.copyWith(status: VehicleListStatus.error, errorMessage: e.message);
@@ -66,7 +70,11 @@ class VehicleListNotifier extends StateNotifier<VehicleListState> {
 
 final vehicleListProvider = StateNotifierProvider<VehicleListNotifier, VehicleListState>((ref) {
   final repository = ref.watch(vehicleRepositoryProvider);
-  return VehicleListNotifier(repository, ref);
+  // Rebuilt (fresh state, fresh load) whenever the signed-in user changes, so
+  // one account never sees another's vehicles and a logout can't leave the
+  // list stuck loading. Nothing is fetched while signed out.
+  final userId = ref.watch(authProvider.select((s) => s.user?.id));
+  return VehicleListNotifier(repository, ref, autoLoad: userId != null);
 });
 
 enum VehicleDetailStatus { initial, loading, loaded, error }
