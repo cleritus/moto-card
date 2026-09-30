@@ -23,7 +23,7 @@ Future<void> main() async {
     UncontrolledProviderScope(
       container: container,
       child: DevicePreview(
-        enabled: true,
+        enabled: false,
         builder: (context) => const MotoApp(),
       ),
     ),

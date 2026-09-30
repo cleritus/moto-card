@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -39,21 +40,37 @@ class NotificationService {
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
-
-    await _plugin.initialize(
-      const InitializationSettings(android: androidSettings, iOS: iosSettings),
+    // Required by the plugin on Windows, otherwise initialize() throws.
+    const windowsSettings = WindowsInitializationSettings(
+      appName: 'Moto Service Card',
+      appUserModelId: 'com.moto.servicecard',
+      guid: '54726de9-ff5f-4188-ad29-cf074bde637b',
     );
 
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(alert: true, badge: true, sound: true);
+    // Notifications are non-essential: a failure here must not stop the app
+    // from starting (main() awaits this before runApp).
+    try {
+      await _plugin.initialize(
+        const InitializationSettings(
+          android: androidSettings,
+          iOS: iosSettings,
+          windows: windowsSettings,
+        ),
+      );
 
-    _initialized = true;
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+
+      _initialized = true;
+    } catch (e) {
+      debugPrint('NotificationService init failed: $e');
+    }
   }
 
   /// Schedules (or reschedules) the notifications for a date-type reminder.
