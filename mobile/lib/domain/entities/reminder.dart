@@ -11,6 +11,12 @@ class Reminder {
   final ReminderType type;
   final DateTime? dueDate;
   final int? dueMileage;
+
+  /// Maintenance interval in km (mileage reminders only).
+  final int? intervalKm;
+
+  /// Odometer reading when this reminder was last completed.
+  final int? lastDoneMileage;
   final bool isCompleted;
   final DateTime? completedAt;
   final String? notes;
@@ -24,6 +30,8 @@ class Reminder {
     required this.type,
     this.dueDate,
     this.dueMileage,
+    this.intervalKm,
+    this.lastDoneMileage,
     required this.isCompleted,
     this.completedAt,
     this.notes,
@@ -41,6 +49,9 @@ class Reminder {
         ),
         dueDate: json['dueDate'] != null ? parseCalendarDate(json['dueDate'] as String) : null,
         dueMileage: json['dueMileage'] as int?,
+        // Both stay null for reminders created before these fields existed.
+        intervalKm: (json['intervalKm'] as num?)?.toInt(),
+        lastDoneMileage: (json['lastDoneMileage'] as num?)?.toInt(),
         isCompleted: json['isCompleted'] as bool,
         completedAt: json['completedAt'] != null ? DateTime.parse(json['completedAt'] as String) : null,
         notes: json['notes'] as String?,
@@ -60,6 +71,8 @@ class Reminder {
     };
     if (dueDate != null) map['dueDate'] = formatCalendarDate(dueDate!);
     if (dueMileage != null) map['dueMileage'] = dueMileage;
+    if (intervalKm != null) map['intervalKm'] = intervalKm;
+    if (lastDoneMileage != null) map['lastDoneMileage'] = lastDoneMileage;
     if (completedAt != null) map['completedAt'] = completedAt!.toIso8601String();
     if (notes != null) map['notes'] = notes;
     return map;
@@ -72,6 +85,8 @@ class Reminder {
     ReminderType? type,
     DateTime? dueDate,
     int? dueMileage,
+    int? intervalKm,
+    int? lastDoneMileage,
     bool? isCompleted,
     DateTime? completedAt,
     String? notes,
@@ -85,6 +100,8 @@ class Reminder {
         type: type ?? this.type,
         dueDate: dueDate ?? this.dueDate,
         dueMileage: dueMileage ?? this.dueMileage,
+        intervalKm: intervalKm ?? this.intervalKm,
+        lastDoneMileage: lastDoneMileage ?? this.lastDoneMileage,
         isCompleted: isCompleted ?? this.isCompleted,
         completedAt: completedAt ?? this.completedAt,
         notes: notes ?? this.notes,

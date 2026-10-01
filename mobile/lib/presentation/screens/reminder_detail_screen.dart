@@ -83,6 +83,13 @@ class ReminderDetailScreen extends ConsumerWidget {
                   ),
                 if (reminder.type == ReminderType.mileage && reminder.dueMileage != null)
                   InfoRow(label: 'Przebieg', value: '${reminder.dueMileage} km'),
+                if (reminder.type == ReminderType.mileage && reminder.intervalKm != null)
+                  InfoRow(label: 'Interwał', value: '${reminder.intervalKm} km'),
+                if (reminder.type == ReminderType.mileage && reminder.lastDoneMileage != null)
+                  InfoRow(
+                    label: 'Ostatnio wykonano',
+                    value: '${reminder.lastDoneMileage} km',
+                  ),
                 InfoRow(label: 'Status', value: reminder.isCompleted ? 'Ukończone' : 'Aktywne'),
                 if (reminder.isCompleted && reminder.completedAt != null)
                   InfoRow(label: 'Ukończono', value: app_date_utils.DateUtils.formatDateTime(reminder.completedAt!)),

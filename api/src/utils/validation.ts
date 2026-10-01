@@ -277,6 +277,16 @@ export const validateReminderCreate: ValidationChain[] = [
     .isInt({ min: 0 })
     .withMessage('Due mileage must be a positive number')
     .toInt(),
+  body('intervalKm')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Interval must be a positive number')
+    .toInt(),
+  body('lastDoneMileage')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Last done mileage must be a positive number')
+    .toInt(),
   handleValidationErrors as unknown as ValidationChain,
 ];
 
@@ -300,6 +310,16 @@ export const validateReminderUpdate: ValidationChain[] = [
     .optional()
     .isInt({ min: 0 })
     .withMessage('Due mileage must be a positive number')
+    .toInt(),
+  body('intervalKm')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Interval must be a positive number')
+    .toInt(),
+  body('lastDoneMileage')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Last done mileage must be a positive number')
     .toInt(),
   body('isCompleted')
     .optional()

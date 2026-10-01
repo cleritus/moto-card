@@ -20,6 +20,8 @@ export interface IReminder extends Document {
   type: ReminderType;
   dueDate?: Date;
   dueMileage?: number;
+  intervalKm?: number;
+  lastDoneMileage?: number;
   isCompleted: boolean;
   completedAt?: Date;
   notes?: string;
@@ -71,6 +73,19 @@ const ReminderSchema = new Schema<IReminder, IReminderModel>(
       min: [0, 'Due mileage cannot be negative'],
       default: undefined,
       index: true,
+    },
+    // Maintenance interval in km (mileage-type reminders only).
+    // Optional: reminders created before this field existed simply have no value.
+    intervalKm: {
+      type: Number,
+      min: [0, 'Interval cannot be negative'],
+      default: undefined,
+    },
+    // Odometer reading at the time this reminder was last completed.
+    lastDoneMileage: {
+      type: Number,
+      min: [0, 'Last done mileage cannot be negative'],
+      default: undefined,
     },
     isCompleted: {
       type: Boolean,

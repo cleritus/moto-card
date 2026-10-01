@@ -24,10 +24,12 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
   final _typeController = TextEditingController();
   final _dueDateController = TextEditingController();
   final _dueMileageController = TextEditingController();
+  final _intervalKmController = TextEditingController();
   final _notesController = TextEditingController();
 
   ReminderType _selectedType = ReminderType.date;
   DateTime? _selectedDueDate;
+  int? _lastDoneMileage;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -46,6 +48,7 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
     _typeController.dispose();
     _dueDateController.dispose();
     _dueMileageController.dispose();
+    _intervalKmController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -63,6 +66,10 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
       } else if (reminder.type == ReminderType.mileage && reminder.dueMileage != null) {
         _dueMileageController.text = reminder.dueMileage.toString();
       }
+      if (reminder.intervalKm != null) {
+        _intervalKmController.text = reminder.intervalKm.toString();
+      }
+      _lastDoneMileage = reminder.lastDoneMileage;
       if (reminder.notes != null) {
         _notesController.text = reminder.notes!;
       }
@@ -92,6 +99,7 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
     if (_formKey.currentState!.validate()) {
       DateTime? dueDate;
       int? dueMileage;
+      int? intervalKm;
 
       if (_selectedType == ReminderType.date) {
         if (_selectedDueDate == null) {
@@ -109,6 +117,10 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
           return;
         }
         dueMileage = int.parse(_dueMileageController.text.trim());
+        final intervalText = _intervalKmController.text.trim();
+        if (intervalText.isNotEmpty) {
+          intervalKm = int.parse(intervalText);
+        }
       }
 
       final reminder = Reminder(
@@ -118,6 +130,8 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
         type: _selectedType,
         dueDate: dueDate,
         dueMileage: dueMileage,
+        intervalKm: intervalKm,
+        lastDoneMileage: _selectedType == ReminderType.mileage ? _lastDoneMileage : null,
         isCompleted: widget.id != null
             ? ref
                     .read(reminderDetailProvider((widget.vehicleId, widget.id!)))
@@ -288,6 +302,27 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
                       final mileage = int.tryParse(value.trim());
                       if (mileage == null || mileage < 0) {
                         return 'Podaj prawidłowy przebieg';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _intervalKmController,
+                    decoration: const InputDecoration(
+                      labelText: 'Interwał (km, opcjonalne)',
+                      prefixIcon: Icon(Icons.autorenew),
+                      hintText: 'np. 5000',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return null;
+                      }
+                      final interval = int.tryParse(value.trim());
+                      if (interval == null || interval < 0) {
+                        return 'Podaj prawidłowy interwał';
                       }
                       return null;
                     },

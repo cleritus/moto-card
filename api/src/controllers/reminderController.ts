@@ -72,7 +72,7 @@ export const reminderController = {
   createReminder: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { vehicleId } = req.params;
-    const { title, type, dueDate, dueMileage, notes } = req.body;
+    const { title, type, dueDate, dueMileage, intervalKm, lastDoneMileage, notes } = req.body;
 
     if (!userId) {
       throw createError('User not authenticated', 401);
@@ -92,6 +92,9 @@ export const reminderController = {
       type,
       dueDate: dueDate ? new Date(dueDate) : undefined,
       dueMileage: dueMileage !== undefined ? parseInt(dueMileage, 10) : undefined,
+      intervalKm: intervalKm !== undefined ? parseInt(intervalKm, 10) : undefined,
+      lastDoneMileage:
+        lastDoneMileage !== undefined ? parseInt(lastDoneMileage, 10) : undefined,
       notes,
     });
 
@@ -108,7 +111,16 @@ export const reminderController = {
   updateReminder: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { vehicleId, id } = req.params;
-    const { title, type, dueDate, dueMileage, isCompleted, notes } = req.body;
+    const {
+      title,
+      type,
+      dueDate,
+      dueMileage,
+      intervalKm,
+      lastDoneMileage,
+      isCompleted,
+      notes,
+    } = req.body;
 
     if (!userId) {
       throw createError('User not authenticated', 401);
@@ -128,6 +140,8 @@ export const reminderController = {
       type?: 'date' | 'mileage';
       dueDate?: Date;
       dueMileage?: number;
+      intervalKm?: number;
+      lastDoneMileage?: number;
       isCompleted?: boolean;
       notes?: string;
     } = {};
@@ -136,6 +150,10 @@ export const reminderController = {
     if (type !== undefined) updateData.type = type;
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
     if (dueMileage !== undefined) updateData.dueMileage = parseInt(dueMileage, 10);
+    if (intervalKm !== undefined) updateData.intervalKm = parseInt(intervalKm, 10);
+    if (lastDoneMileage !== undefined) {
+      updateData.lastDoneMileage = parseInt(lastDoneMileage, 10);
+    }
     if (isCompleted !== undefined) updateData.isCompleted = isCompleted;
     if (notes !== undefined) updateData.notes = notes;
 
