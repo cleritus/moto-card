@@ -56,7 +56,7 @@ export const vehicleController = {
    */
   createVehicle: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    const { name, make, vehicleModel, year, mileage, licensePlate, vin, purchaseDate, notes } = req.body;
+    const { name, make, vehicleModel, year, mileage, engineCapacity, licensePlate, vin, purchaseDate, notes } = req.body;
 
     if (!userId) {
       throw createError('User not authenticated', 401);
@@ -73,6 +73,7 @@ export const vehicleController = {
       vehicleModel,
       year: parseInt(year, 10),
       mileage: mileage ? parseInt(mileage, 10) : undefined,
+      engineCapacity: engineCapacity ? parseInt(engineCapacity, 10) : undefined,
       licensePlate,
       vin: vin || undefined,
       purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
@@ -92,7 +93,7 @@ export const vehicleController = {
   updateVehicle: asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { id } = req.params;
-    const { name, make, vehicleModel, year, mileage, licensePlate, vin, purchaseDate, notes } = req.body;
+    const { name, make, vehicleModel, year, mileage, engineCapacity, licensePlate, vin, purchaseDate, notes } = req.body;
 
     if (!userId) {
       throw createError('User not authenticated', 401);
@@ -109,6 +110,7 @@ export const vehicleController = {
       vehicleModel?: string;
       year?: number;
       mileage?: number;
+      engineCapacity?: number;
       licensePlate?: string;
       vin?: string;
       purchaseDate?: Date;
@@ -119,6 +121,7 @@ export const vehicleController = {
     if (vehicleModel !== undefined) updateData.vehicleModel = vehicleModel;
     if (year !== undefined) updateData.year = parseInt(year, 10);
     if (mileage !== undefined) updateData.mileage = parseInt(mileage, 10);
+    if (engineCapacity !== undefined) updateData.engineCapacity = parseInt(engineCapacity, 10);
     if (licensePlate !== undefined) updateData.licensePlate = licensePlate;
     if (vin !== undefined) updateData.vin = vin;
     if (purchaseDate !== undefined) updateData.purchaseDate = new Date(purchaseDate);

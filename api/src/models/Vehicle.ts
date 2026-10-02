@@ -8,6 +8,7 @@ export interface IVehicle extends Document {
   vehicleModel: string;  // Renamed from 'model' to avoid conflict with Document.model
   year: number;
   mileage?: number;
+  engineCapacity?: number;
   licensePlate: string;
   vin?: string;
   purchaseDate?: Date;
@@ -59,6 +60,11 @@ const VehicleSchema = new Schema<IVehicle, IVehicleModel>(
     mileage: {
       type: Number,
       min: [0, 'Mileage cannot be negative'],
+      default: undefined,
+    },
+    engineCapacity: {
+      type: Number,
+      min: [0, 'Engine capacity cannot be negative'],
       default: undefined,
     },
     licensePlate: {

@@ -83,43 +83,50 @@ class _PlateRowView extends StatelessWidget {
                 ),
               ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Flexible(
-            child: Text(
-              row.label.toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.label(size: 9.5, color: keyColor),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: CustomPaint(
-                size: const Size(double.infinity, 1),
-                painter: _DottedLeaderPainter(dotColor),
+      // Key and value take their natural width (capped), the leader is the
+      // only flexible child — so every value ends flush on the right edge.
+      child: LayoutBuilder(
+        builder: (context, constraints) => Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            ConstrainedBox(
+              constraints:
+                  BoxConstraints(maxWidth: constraints.maxWidth * 0.4),
+              child: Text(
+                row.label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.label(size: 9.5, color: keyColor),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            flex: 3,
-            child: Text(
-              row.value,
-              maxLines: 2,
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.data(
-                size: row.emphasis ? 15 : 12.5,
-                weight: row.emphasis ? FontWeight.w600 : FontWeight.w500,
-                color: valueColor,
+            const SizedBox(width: 8),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: CustomPaint(
+                  size: const Size(double.infinity, 1),
+                  painter: _DottedLeaderPainter(dotColor),
+                ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints:
+                  BoxConstraints(maxWidth: constraints.maxWidth * 0.55),
+              child: Text(
+                row.value,
+                maxLines: 2,
+                textAlign: TextAlign.right,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.data(
+                  size: row.emphasis ? 15 : 12.5,
+                  weight: row.emphasis ? FontWeight.w600 : FontWeight.w500,
+                  color: valueColor,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -87,6 +87,11 @@ export const validateVehicleCreate: ValidationChain[] = [
     .isInt({ min: 0 })
     .withMessage('Mileage must be a positive number')
     .toInt(),
+  body('engineCapacity')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Engine capacity must be a positive number')
+    .toInt(),
   body('licensePlate')
     .notEmpty()
     .withMessage('License plate is required')
@@ -131,6 +136,11 @@ export const validateVehicleUpdate: ValidationChain[] = [
     .optional()
     .isInt({ min: 0 })
     .withMessage('Mileage must be a positive number')
+    .toInt(),
+  body('engineCapacity')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Engine capacity must be a positive number')
     .toInt(),
   body('licensePlate')
     .optional()

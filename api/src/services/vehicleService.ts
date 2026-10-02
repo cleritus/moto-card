@@ -8,6 +8,7 @@ export interface VehicleCreateData {
   vehicleModel: string;
   year: number;
   mileage?: number;
+  engineCapacity?: number;
   licensePlate: string;
   vin?: string;
   purchaseDate?: Date;
@@ -20,6 +21,7 @@ export interface VehicleUpdateData {
   vehicleModel?: string;
   year?: number;
   mileage?: number;
+  engineCapacity?: number;
   licensePlate?: string;
   vin?: string;
   purchaseDate?: Date;
@@ -75,6 +77,7 @@ export class VehicleService {
       vehicleModel: data.vehicleModel,
       year: data.year,
       mileage: data.mileage,
+      engineCapacity: data.engineCapacity,
       licensePlate: data.licensePlate,
       vin: data.vin,
       purchaseDate: data.purchaseDate,
@@ -104,6 +107,7 @@ export class VehicleService {
     if (data.vehicleModel !== undefined) vehicle.set('vehicleModel', data.vehicleModel);
     if (data.year !== undefined) vehicle.set('year', data.year);
     if (data.mileage !== undefined) vehicle.set('mileage', data.mileage);
+    if (data.engineCapacity !== undefined) vehicle.set('engineCapacity', data.engineCapacity);
     if (data.licensePlate !== undefined) vehicle.set('licensePlate', data.licensePlate);
     if (data.vin !== undefined) vehicle.set('vin', data.vin);
     if (data.purchaseDate !== undefined) vehicle.set('purchaseDate', data.purchaseDate);

@@ -27,6 +27,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
   final _vehicleModelController = TextEditingController();
   final _yearController = TextEditingController();
   final _mileageController = TextEditingController();
+  final _engineCapacityController = TextEditingController();
   final _licensePlateController = TextEditingController();
   final _vinController = TextEditingController();
   final _purchaseDateController = TextEditingController();
@@ -53,6 +54,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
     _vehicleModelController.dispose();
     _yearController.dispose();
     _mileageController.dispose();
+    _engineCapacityController.dispose();
     _licensePlateController.dispose();
     _vinController.dispose();
     _purchaseDateController.dispose();
@@ -72,6 +74,9 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
       _yearController.text = vehicle.year.toString();
       if (vehicle.mileage != null) {
         _mileageController.text = vehicle.mileage.toString();
+      }
+      if (vehicle.engineCapacity != null) {
+        _engineCapacityController.text = vehicle.engineCapacity.toString();
       }
       _licensePlateController.text = vehicle.licensePlate;
       if (vehicle.vin != null) {
@@ -114,6 +119,9 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
         year: int.parse(_yearController.text.trim()),
         mileage: _mileageController.text.trim().isNotEmpty
             ? int.parse(_mileageController.text.trim())
+            : null,
+        engineCapacity: _engineCapacityController.text.trim().isNotEmpty
+            ? int.parse(_engineCapacityController.text.trim())
             : null,
         licensePlate: _licensePlateController.text.trim(),
         vin: _vinController.text.trim().isEmpty
@@ -310,6 +318,26 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
                         final mileage = int.tryParse(value.trim());
                         if (mileage == null || mileage < 0) {
                           return 'Podaj prawidłowy przebieg';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                LabeledField(
+                  label: 'POJEMNOŚĆ SILNIKA / CM³',
+                  hint: 'opcjonalne',
+                  child: TextFormField(
+                    controller: _engineCapacityController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. 1584'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (value) {
+                      if (value != null && value.trim().isNotEmpty) {
+                        final capacity = int.tryParse(value.trim());
+                        if (capacity == null || capacity <= 0) {
+                          return 'Podaj prawidłową pojemność';
                         }
                       }
                       return null;

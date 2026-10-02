@@ -245,6 +245,8 @@ class VehicleOverviewScreen extends ConsumerWidget {
                   DataPlateRow('MARKA', vehicle.make),
                   DataPlateRow('MODEL', vehicle.vehicleModel),
                   DataPlateRow('ROK', '${vehicle.year}'),
+                  if (vehicle.engineCapacity != null)
+                    DataPlateRow('POJEMNOŚĆ', '${vehicle.engineCapacity} cm³'),
                   if (vehicle.licensePlate.isNotEmpty)
                     DataPlateRow('NR REJ.', vehicle.licensePlate.toUpperCase()),
                   if (vehicle.vin != null && vehicle.vin!.isNotEmpty)

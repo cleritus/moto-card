@@ -8,6 +8,7 @@ class Vehicle {
   final String vehicleModel;
   final int year;
   final int? mileage;
+  final int? engineCapacity;
   final String licensePlate;
   final String? vin;
   final DateTime? purchaseDate;
@@ -23,6 +24,7 @@ class Vehicle {
     required this.vehicleModel,
     required this.year,
     this.mileage,
+    this.engineCapacity,
     required this.licensePlate,
     this.vin,
     this.purchaseDate,
@@ -39,6 +41,7 @@ class Vehicle {
         vehicleModel: json['vehicleModel'] as String,
         year: json['year'] as int,
         mileage: json['mileage'] as int?,
+        engineCapacity: json['engineCapacity'] as int?,
         // Falls back to empty for vehicles created before this field existed.
         licensePlate: json['licensePlate'] as String? ?? '',
         vin: json['vin'] as String?,
@@ -63,6 +66,7 @@ class Vehicle {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
+    if (engineCapacity != null) map['engineCapacity'] = engineCapacity;
     if (vin != null) map['vin'] = vin;
     if (purchaseDate != null) {
       map['purchaseDate'] = formatCalendarDate(purchaseDate!);
@@ -79,6 +83,7 @@ class Vehicle {
     String? vehicleModel,
     int? year,
     int? mileage,
+    int? engineCapacity,
     String? licensePlate,
     String? vin,
     DateTime? purchaseDate,
@@ -94,6 +99,7 @@ class Vehicle {
         vehicleModel: vehicleModel ?? this.vehicleModel,
         year: year ?? this.year,
         mileage: mileage ?? this.mileage,
+        engineCapacity: engineCapacity ?? this.engineCapacity,
         licensePlate: licensePlate ?? this.licensePlate,
         vin: vin ?? this.vin,
         purchaseDate: purchaseDate ?? this.purchaseDate,
