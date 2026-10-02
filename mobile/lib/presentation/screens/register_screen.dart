@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../config/theme.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/double_rule.dart';
+import '../widgets/error_view.dart';
+import '../widgets/garage_button.dart';
+import '../widgets/labeled_field.dart';
 
+/// §6 row 1 — same name plate as the login screen, one form code further on.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -49,69 +55,60 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(
-                    Icons.motorcycle,
-                    size: 64,
-                    color: AppColors.darkPrimary,
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'UTWÓRZ KONTO',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
-                      color: AppColors.darkOnBackground,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Container(
-                      width: 64,
-                      height: 3,
-                      color: AppColors.darkPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-                  const _FieldLabel('Email'),
-                  const SizedBox(height: 8),
-                  TextFormField(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('MOTO / CARD', style: AppText.micro()),
+                    Text('FORM 02-B', style: AppText.micro()),
+                  ],
+                ),
+                const DoubleRule(margin: EdgeInsets.only(top: 10)),
+                const SizedBox(height: 48),
+                Text('NOWE', style: AppText.display(size: 52)),
+                Text(
+                  'STANOWISKO',
+                  style: AppText.display(size: 52, color: AppColors.oxideLit),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'ZAKŁADAMY KARTĘ WARSZTATOWĄ',
+                  style: AppText.micro().copyWith(letterSpacing: 9.5 * 0.2),
+                ),
+                LabeledField(
+                  label: 'E-mail',
+                  child: TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
+                    style: AppText.data(size: 14.5),
                     validator: (value) {
                       if (value == null || value.isEmpty) return 'Podaj email';
                       if (!value.contains('@')) return 'Nieprawidłowy email';
                       return null;
                     },
                   ),
-                  const SizedBox(height: 20),
-                  const _FieldLabel('Hasło'),
-                  const SizedBox(height: 8),
-                  TextFormField(
+                ),
+                LabeledField(
+                  label: 'Hasło',
+                  hint: 'min. 6 znaków',
+                  child: TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.next,
+                    style: AppText.data(size: 14.5),
                     decoration: InputDecoration(
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: AppColors.darkLabel,
-                        ),
-                        onPressed: () => setState(
+                      suffixIcon: RevealToggle(
+                        obscured: _obscurePassword,
+                        onTap: () => setState(
                           () => _obscurePassword = !_obscurePassword,
                         ),
                       ),
@@ -124,23 +121,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 20),
-                  const _FieldLabel('Potwierdź hasło'),
-                  const SizedBox(height: 8),
-                  TextFormField(
+                ),
+                LabeledField(
+                  label: 'Potwierdź hasło',
+                  child: TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _submit(),
+                    style: AppText.data(size: 14.5),
                     decoration: InputDecoration(
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: AppColors.darkLabel,
-                        ),
-                        onPressed: () => setState(
+                      suffixIcon: RevealToggle(
+                        obscured: _obscureConfirmPassword,
+                        onTap: () => setState(
                           () => _obscureConfirmPassword =
                               !_obscureConfirmPassword,
                         ),
@@ -156,69 +149,39 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 28),
-                  if (authState.errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Text(
-                        authState.errorMessage!,
-                        style: const TextStyle(color: AppColors.darkAccent),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  FilledButton(
-                    onPressed: isLoading ? null : _submit,
-                    child: isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.darkOnPrimary,
-                            ),
-                          )
-                        : const Text('ZAREJESTRUJ SIĘ'),
-                  ),
-                  const SizedBox(height: 16),
-                  OutlinedButton(
-                    onPressed: isLoading ? null : () => context.go('/login'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.darkOnBackground,
-                      side: const BorderSide(color: AppColors.darkBorder),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.zero,
-                      ),
-                      textStyle: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    child: const Text('MAM JUŻ KONTO'),
-                  ),
+                ),
+                const SizedBox(height: 28),
+                if (authState.errorMessage != null) ...[
+                  FaultStrip(message: authState.errorMessage!),
+                  const SizedBox(height: 20),
                 ],
-              ),
+                GarageButton(
+                  label: 'ZAŁÓŻ KARTĘ',
+                  isLoading: isLoading,
+                  onPressed: isLoading ? null : _submit,
+                ),
+                const SizedBox(height: 18),
+                GarageButton.ghost(
+                  label: 'MAM JUŻ KONTO',
+                  trailingArrow: true,
+                  onPressed: isLoading ? null : () => context.go('/login'),
+                ),
+                const SizedBox(height: 34),
+                const DoubleRule(),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('WARSZTAT / PL', style: AppText.micro()),
+                    Text('REV. 03', style: AppText.micro()),
+                  ],
+                ),
+                const SizedBox(height: 26),
+              ],
             ),
           ),
         ),
       ),
     );
   }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-        text.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 10,
-          letterSpacing: 2,
-          fontWeight: FontWeight.bold,
-          color: AppColors.darkLabel,
-        ),
-      );
 }

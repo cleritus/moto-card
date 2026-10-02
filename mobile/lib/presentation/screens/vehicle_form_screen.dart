@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../domain/entities/vehicle.dart';
 import '../providers/vehicle_provider.dart';
-import '../widgets/section_header.dart';
+import '../widgets/error_view.dart';
+import '../widgets/garage_app_bar.dart';
+import '../widgets/garage_button.dart';
+import '../widgets/labeled_field.dart';
 
 class VehicleFormScreen extends ConsumerStatefulWidget {
   final String? id;
@@ -189,185 +192,180 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
       });
     }
 
+    final isEdit = widget.id != null;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.id != null ? 'EDYTUJ POJAZD' : 'NOWY POJAZD'),
+      appBar: GarageAppBar(
+        title: isEdit ? 'EDYTUJ POJAZD' : 'NOWY POJAZD',
+        subtitle: 'FORM 01-A',
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppGeo.screenMargin,
+            0,
+            AppGeo.screenMargin,
+            32,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SectionHeader('Dane podstawowe', padded: false),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nazwa',
-                    prefixIcon: Icon(Icons.text_fields),
-                    hintText: 'np. Mój motocykl',
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Podaj nazwę pojazdu';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _makeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Marka',
-                    prefixIcon: Icon(Icons.directions_car),
-                    hintText: 'np. Honda',
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Podaj markę';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _vehicleModelController,
-                  decoration: const InputDecoration(
-                    labelText: 'Model',
-                    prefixIcon: Icon(Icons.motorcycle),
-                    hintText: 'np. CBR600RR',
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Podaj model';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _yearController,
-                  decoration: const InputDecoration(
-                    labelText: 'Rok produkcji',
-                    prefixIcon: Icon(Icons.calendar_today),
-                    hintText: 'np. 2020',
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Podaj rok produkcji';
-                    }
-                    final year = int.tryParse(value.trim());
-                    if (year == null) {
-                      return 'Podaj prawidłowy rok';
-                    }
-                    if (year < 1900 || year > DateTime.now().year + 1) {
-                      return 'Rok musi być między 1900 a ${DateTime.now().year + 1}';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _licensePlateController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nr rejestracyjny',
-                    prefixIcon: Icon(Icons.badge),
-                    hintText: 'np. BI619X',
-                  ),
-                  textCapitalization: TextCapitalization.characters,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Podaj numer rejestracyjny';
-                    }
-                    return null;
-                  },
-                ),
-                const SectionHeader('Szczegóły', padded: false),
-                TextFormField(
-                  controller: _mileageController,
-                  decoration: const InputDecoration(
-                    labelText: 'Przebieg (km)',
-                    prefixIcon: Icon(Icons.speed),
-                    hintText: 'np. 15000',
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (value) {
-                    if (value != null && value.trim().isNotEmpty) {
-                      final mileage = int.tryParse(value.trim());
-                      if (mileage == null || mileage < 0) {
-                        return 'Podaj prawidłowy przebieg';
+                const FormSection(title: 'DANE PODSTAWOWE', code: 'SEKCJA 1'),
+                LabeledField(
+                  label: 'NAZWA',
+                  child: TextFormField(
+                    controller: _nameController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. Street Bob'),
+                    textCapitalization: TextCapitalization.sentences,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Podaj nazwę pojazdu';
                       }
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _vinController,
-                  decoration: const InputDecoration(
-                    labelText: 'VIN (opcjonalnie)',
-                    prefixIcon: Icon(Icons.pin),
-                    hintText: 'np. 1HD1GM4169K328789',
+                      return null;
+                    },
                   ),
-                  textCapitalization: TextCapitalization.characters,
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _purchaseDateController,
-                  decoration: const InputDecoration(
-                    labelText: 'Data zakupu (opcjonalnie)',
-                    prefixIcon: Icon(Icons.calendar_today),
-                    hintText: 'dd.mm.rrrr',
+                LabeledField(
+                  label: 'MARKA',
+                  child: TextFormField(
+                    controller: _makeController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. Honda'),
+                    textCapitalization: TextCapitalization.words,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Podaj markę';
+                      }
+                      return null;
+                    },
                   ),
-                  readOnly: true,
-                  onTap: _selectPurchaseDate,
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notatki (opcjonalnie)',
-                    prefixIcon: Icon(Icons.note),
-                    hintText: 'np. znane modyfikacje',
+                LabeledField(
+                  label: 'MODEL',
+                  child: TextFormField(
+                    controller: _vehicleModelController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. CBR600RR'),
+                    textCapitalization: TextCapitalization.words,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Podaj model';
+                      }
+                      return null;
+                    },
                   ),
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLines: 3,
                 ),
-                const SizedBox(height: 24),
-                if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: AppColors.darkAccent),
-                      textAlign: TextAlign.center,
+                LabeledField(
+                  label: 'ROK PRODUKCJI',
+                  child: TextFormField(
+                    controller: _yearController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. 2020'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Podaj rok produkcji';
+                      }
+                      final year = int.tryParse(value.trim());
+                      if (year == null) {
+                        return 'Podaj prawidłowy rok';
+                      }
+                      if (year < 1900 || year > DateTime.now().year + 1) {
+                        return 'Rok musi być między 1900 a ${DateTime.now().year + 1}';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                LabeledField(
+                  label: 'NR REJESTRACYJNY',
+                  child: TextFormField(
+                    controller: _licensePlateController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. BI619X'),
+                    textCapitalization: TextCapitalization.characters,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Podaj numer rejestracyjny';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const FormSection(title: 'SZCZEGÓŁY', code: 'SEKCJA 2'),
+                LabeledField(
+                  label: 'PRZEBIEG / KM',
+                  child: TextFormField(
+                    controller: _mileageController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. 15000'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (value) {
+                      if (value != null && value.trim().isNotEmpty) {
+                        final mileage = int.tryParse(value.trim());
+                        if (mileage == null || mileage < 0) {
+                          return 'Podaj prawidłowy przebieg';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                LabeledField(
+                  label: 'VIN',
+                  hint: 'opcjonalne',
+                  child: TextFormField(
+                    controller: _vinController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(
+                      hintText: 'np. 1HD1GM4169K328789',
                     ),
+                    textCapitalization: TextCapitalization.characters,
                   ),
-                FilledButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.darkOnPrimary,
-                          ),
-                        )
-                      : Text(widget.id != null ? 'ZAPISZ ZMIANY' : 'DODAJ POJAZD'),
                 ),
-                const SizedBox(height: 16),
-                OutlinedButton(
+                LabeledField(
+                  label: 'DATA ZAKUPU',
+                  hint: 'opcjonalne',
+                  child: TextFormField(
+                    controller: _purchaseDateController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'dd.mm.rrrr'),
+                    readOnly: true,
+                    onTap: _selectPurchaseDate,
+                  ),
+                ),
+                LabeledField(
+                  label: 'NOTATKI',
+                  hint: 'opcjonalne',
+                  child: TextFormField(
+                    controller: _notesController,
+                    style: AppText.body(size: 14.5),
+                    decoration: const InputDecoration(
+                      hintText: 'np. znane modyfikacje',
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: 3,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                if (_errorMessage != null) ...[
+                  FaultStrip(message: _errorMessage!),
+                  const SizedBox(height: 20),
+                ],
+                GarageButton(
+                  label: isEdit ? 'ZAPISZ ZMIANY' : '+ DO GARAŻU',
+                  isLoading: _isLoading,
+                  onPressed: _isLoading ? null : _submit,
+                ),
+                const SizedBox(height: 14),
+                GarageButton.ghost(
+                  label: 'ANULUJ',
                   onPressed: _isLoading ? null : () => context.pop(),
-                  child: const Text('ANULUJ'),
                 ),
               ],
             ),

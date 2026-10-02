@@ -2,12 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../config/theme.dart';
 import '../../domain/entities/vehicle.dart';
 import '../providers/auth_provider.dart';
 import '../providers/vehicle_provider.dart';
-import '../widgets/data_list_tile.dart';
+import '../utils/format.dart';
+import '../widgets/delete_confirmation_dialog.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/error_view.dart';
+import '../widgets/garage_button.dart';
+import '../widgets/screen_header.dart';
+import '../widgets/workshop_card.dart';
 
+/// §6 row 2 — the garage. Cards are machine plaques with a bay number in the
+/// spine, not SaaS list rows.
 class VehicleListScreen extends ConsumerWidget {
   const VehicleListScreen({super.key});
 
@@ -18,26 +27,32 @@ class VehicleListScreen extends ConsumerWidget {
     ref.listen<VehicleListState>(vehicleListProvider, (previous, next) {
       if (next.status == VehicleListStatus.error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMessage ?? 'Wystąpił błąd')),
+          SnackBar(content: Text(next.errorMessage ?? 'Coś się zacięło.')),
         );
       }
     });
 
+    final count = state.vehicles.length;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('GARAGE'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_outlined),
-            tooltip: 'Wyloguj',
-            onPressed: () => ref.read(authProvider.notifier).logout(),
-          ),
-        ],
-      ),
-      body: _buildBody(context, ref, state),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/vehicles/new'),
-        child: const Icon(Icons.add),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            ScreenHeader(
+              tagLeft: 'MOTO / GARAŻ',
+              tagRight: 'WYLOGUJ',
+              onTagRightTap: () => ref.read(authProvider.notifier).logout(),
+              title: 'GARAŻ',
+              subtitle: 'STANOWISKA: ${Fmt.serial(count, width: 2)}',
+              action: SmallButton(
+                label: '+ DO GARAŻU',
+                onPressed: () => context.push('/vehicles/new'),
+              ),
+            ),
+            Expanded(child: _buildBody(context, ref, state)),
+          ],
+        ),
       ),
     );
   }
@@ -47,118 +62,74 @@ class VehicleListScreen extends ConsumerWidget {
     switch (state.status) {
       case VehicleListStatus.loading:
       case VehicleListStatus.initial:
-        return const Center(child: CircularProgressIndicator());
+        return const LoadingView(label: 'OTWIERAM GARAŻ');
       case VehicleListStatus.loaded:
         if (state.vehicles.isEmpty) {
-          return const _EmptyState();
+          return const EmptyState(
+            tag: 'STANOWISKA: 00',
+            title: 'PUSTY GARAŻ.',
+            subtitle: 'Nic tu jeszcze nie stoi. Wprowadź pierwszą maszynę.',
+          );
         }
         return RefreshIndicator(
+          color: AppColors.oxideLit,
+          backgroundColor: AppColors.dirtyBlack,
           onRefresh: () => ref.read(vehicleListProvider.notifier).refresh(),
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: state.vehicles.length,
+            padding: const EdgeInsets.fromLTRB(
+              AppGeo.screenMargin,
+              20,
+              AppGeo.screenMargin,
+              40,
+            ),
+            itemCount: state.vehicles.length + 1,
             itemBuilder: (context, index) {
-              final vehicle = state.vehicles[index];
-              return _VehicleListItem(vehicle: vehicle);
+              if (index == state.vehicles.length) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'PRZESUŃ KARTĘ W LEWO,\nABY WYPROWADZIĆ Z GARAŻU.',
+                    style: AppText.micro().copyWith(
+                      letterSpacing: 9.5 * 0.12,
+                      height: 1.7,
+                    ),
+                  ),
+                );
+              }
+              return _VehiclePlaque(
+                vehicle: state.vehicles[index],
+                bay: index + 1,
+              );
             },
           ),
         );
       case VehicleListStatus.error:
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                state.errorMessage ?? 'Wystąpił błąd',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () =>
-                    ref.read(vehicleListProvider.notifier).refresh(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('SPRÓBUJ PONOWNIE'),
-              ),
-            ],
-          ),
+        return ErrorView(
+          detail: state.errorMessage,
+          onRetry: () => ref.read(vehicleListProvider.notifier).refresh(),
         );
     }
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+class _VehiclePlaque extends ConsumerWidget {
+  const _VehiclePlaque({required this.vehicle, required this.bay});
 
-  @override
-  Widget build(BuildContext context) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.two_wheeler,
-              size: 80,
-              color: AppColors.darkBorder,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'BRAK POJAZDÓW',
-              style: TextStyle(
-                fontSize: 16,
-                letterSpacing: 2,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkLabel,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Dodaj swój pierwszy pojazd',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.darkOnSurface.withAlpha(153),
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
-class _VehicleListItem extends ConsumerWidget {
   final Vehicle vehicle;
-
-  const _VehicleListItem({required this.vehicle});
+  final int bay;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Dismissible(
       key: Key(vehicle.id),
       direction: DismissDirection.endToStart,
-      confirmDismiss: (direction) async {
-        return await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Usuń pojazd'),
-                content: Text('Czy na pewno chcesz usunąć ${vehicle.name}?'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Anuluj'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Usuń'),
-                  ),
-                ],
-              ),
-            ) ??
-            false;
-      },
+      confirmDismiss: (_) => confirmDelete(
+        context,
+        title: 'WYPROWADŹ Z GARAŻU',
+        message: 'Wyprowadzić ${vehicle.name} z garażu? '
+            'Razem z maszyną znika jej książka serwisowa.',
+        confirmLabel: 'WYPROWADŹ',
+      ),
       onDismissed: (_) {
         HapticFeedback.mediumImpact();
         ref.read(vehicleListProvider.notifier).clearError();
@@ -169,20 +140,63 @@ class _VehicleListItem extends ConsumerWidget {
           ref.read(vehicleListProvider.notifier).refresh();
         });
       },
-      background: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        color: Theme.of(context).colorScheme.error,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 16),
-        child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onError),
-      ),
-      child: DataListTile(
-        primary: vehicle.name,
-        secondary:
-            '${vehicle.make} ${vehicle.vehicleModel} · ${vehicle.year}'
-                .toUpperCase(),
-        trailing: vehicle.mileage != null ? '${vehicle.mileage} km' : null,
+      background: const SwipeDeleteBackground(label: 'WYPROWADŹ'),
+      child: WorkshopCard(
+        spineLabel: 'Nº ${Fmt.serial(bay, width: 2)}',
         onTap: () => context.push('/vehicles/${vehicle.id}'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(vehicle.make.toUpperCase(),
+                style: AppText.label(size: 9.5).copyWith(
+                  letterSpacing: 9.5 * 0.18,
+                )),
+            const SizedBox(height: 3),
+            Text(
+              vehicle.name.toUpperCase(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.condensed(size: 27, color: AppColors.bone)
+                  .copyWith(height: 1, letterSpacing: 27 * 0.02),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              '${vehicle.vehicleModel.toUpperCase()} · ${vehicle.year}',
+              style: AppText.data(size: 11, color: AppColors.fadedInk),
+            ),
+            Container(
+              margin: const EdgeInsets.only(top: 14),
+              padding: const EdgeInsets.only(top: 11),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.hairline)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (vehicle.licensePlate.isNotEmpty)
+                    PlateChip(text: vehicle.licensePlate),
+                  const Spacer(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        vehicle.mileage != null ? Fmt.km(vehicle.mileage!) : '—',
+                        style: AppText.data(size: 21, weight: FontWeight.w600)
+                            .copyWith(letterSpacing: 0, height: 1),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'KM',
+                        style: AppText.micro(size: 9)
+                            .copyWith(letterSpacing: 9 * 0.2),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

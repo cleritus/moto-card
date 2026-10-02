@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/service_log_provider.dart';
-import '../utils/date_utils.dart' as app_date_utils;
-import '../widgets/delete_confirmation_dialog.dart';
-import '../widgets/info_card.dart';
-import '../widgets/info_row.dart';
 
+import '../../config/theme.dart';
+import '../../domain/entities/service_log.dart';
+import '../providers/service_log_provider.dart';
+import '../utils/format.dart';
+import '../widgets/data_plate.dart';
+import '../widgets/delete_confirmation_dialog.dart';
+import '../widgets/error_view.dart';
+import '../widgets/garage_app_bar.dart';
+import '../widgets/garage_button.dart';
+import '../widgets/paper_sheet.dart';
+import '../widgets/stamp_badge.dart';
+
+/// §8, "wpis otwarty" — the open leaf.
+///
+/// The only screen in the app where paper is the background: dark ink on
+/// aged paper (10.63:1), perforation on the left, a parts table with dotted
+/// leaders, a rust WYKONANO stamp and a signature line. The sheet keeps its
+/// margins and its own shadow, so it never floods the screen with light at
+/// night (§12.1). Action buttons stay on the dark canvas *under* the sheet —
+/// the sheet is a document, not an interface.
 class ServiceLogDetailScreen extends ConsumerWidget {
+  const ServiceLogDetailScreen({
+    super.key,
+    required this.vehicleId,
+    required this.id,
+  });
+
   final String vehicleId;
   final String id;
-
-  const ServiceLogDetailScreen({super.key, required this.vehicleId, required this.id});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,136 +41,182 @@ class ServiceLogDetailScreen extends ConsumerWidget {
       (previous, next) {
         if (next.status == ServiceLogDetailStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(next.errorMessage ?? 'Wystąpił błąd')),
+            SnackBar(content: Text(next.errorMessage ?? 'Coś się zacięło.')),
           );
         }
       },
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('SERWIS'),
-        actions: [
-          if (state.serviceLog != null)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => context.push('/vehicles/$vehicleId/service-logs/$id/edit'),
-            ),
-          if (state.serviceLog != null)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () => _confirmDelete(context, ref),
-            ),
-        ],
+      appBar: const GarageAppBar(
+        title: 'WPIS SERWISOWY',
+        subtitle: 'KSIĄŻKA SERWISOWA',
       ),
       body: _buildBody(context, ref, state),
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, ServiceLogDetailState state) {
+  Widget _buildBody(
+      BuildContext context, WidgetRef ref, ServiceLogDetailState state) {
     switch (state.status) {
+      case ServiceLogDetailStatus.initial:
       case ServiceLogDetailStatus.loading:
-        return const Center(child: CircularProgressIndicator());
+        return const LoadingView(label: 'OTWIERAM WPIS');
+      case ServiceLogDetailStatus.error:
+        return ErrorView(
+          detail: state.errorMessage,
+          onRetry: () => ref
+              .read(serviceLogDetailNotifierProvider((vehicleId, id)))
+              .loadServiceLog(id),
+        );
       case ServiceLogDetailStatus.loaded:
-        if (state.serviceLog == null) {
-          return const Center(child: Text('Serwis nie został znaleziony'));
+        final serviceLog = state.serviceLog;
+        if (serviceLog == null) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Text('Tej kartki nie ma w książce.'),
+            ),
+          );
         }
-        final serviceLog = state.serviceLog!;
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(bottom: 40),
           children: [
-            InfoCard(
-              title: 'Informacje',
-              icon: Icons.build,
-              children: [
-                InfoRow(label: 'Data', value: app_date_utils.DateUtils.formatDateTime(serviceLog.date)),
-                InfoRow(label: 'Typ serwisu', value: serviceLog.serviceType),
-                InfoRow(label: 'Przebieg', value: '${serviceLog.mileage} km'),
-                InfoRow(label: 'Koszt', value: '${serviceLog.totalCost.toStringAsFixed(2)} zł'),
-                if (serviceLog.mechanic != null && serviceLog.mechanic!.isNotEmpty)
-                  InfoRow(label: 'Mechanik', value: serviceLog.mechanic!),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (serviceLog.description != null && serviceLog.description!.isNotEmpty)
-              InfoCard(
-                title: 'Opis',
-                icon: Icons.description,
+            _Sheet(serviceLog: serviceLog),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
+              child: Column(
                 children: [
-                  InfoRow(label: '', value: serviceLog.description!, wrap: true),
+                  GarageButton(
+                    label: 'EDYTUJ WPIS',
+                    onPressed: () => context.push(
+                      '/vehicles/$vehicleId/service-logs/$id/edit',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  GarageButton.danger(
+                    label: 'WYRWIJ KARTKĘ',
+                    onPressed: () => _confirmDelete(context, ref),
+                  ),
                 ],
               ),
-            const SizedBox(height: 16),
-            if (serviceLog.notes != null && serviceLog.notes!.isNotEmpty)
-              InfoCard(
-                title: 'Notatki',
-                icon: Icons.note,
-                children: [
-                  InfoRow(label: '', value: serviceLog.notes!, wrap: true),
-                ],
-              ),
-            const SizedBox(height: 16),
-            InfoCard(
-              title: 'Szczegóły',
-              icon: Icons.description_outlined,
-              children: [
-                InfoRow(label: 'Utworzono', value: app_date_utils.DateUtils.formatDateTime(serviceLog.createdAt)),
-                InfoRow(label: 'Zaktualizowano', value: app_date_utils.DateUtils.formatDateTime(serviceLog.updatedAt)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () => context.push('/vehicles/$vehicleId/service-logs/$id/edit'),
-              icon: const Icon(Icons.edit),
-              label: const Text('EDYTUJ SERWIS'),
             ),
           ],
         );
-      case ServiceLogDetailStatus.error:
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                state.errorMessage ?? 'Wystąpił błąd',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () =>
-                    ref.read(serviceLogDetailNotifierProvider((vehicleId, id))).loadServiceLog(id),
-                icon: const Icon(Icons.refresh),
-                label: const Text('SPRÓBUJ PONOWNIE'),
-              ),
-            ],
-          ),
-        );
-      case ServiceLogDetailStatus.initial:
-        return const Center(child: CircularProgressIndicator());
     }
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog<bool>(
       context: context,
-      builder: (context) => DeleteConfirmationDialog(
-        title: 'Usuń serwis',
-        message: 'Czy na pewno chcesz usunąć ten serwis?',
+      builder: (dialogContext) => DeleteConfirmationDialog(
+        title: 'WYRWIJ KARTKĘ',
+        message: 'Usunąć ten wpis z książki serwisowej? Tego się nie cofnie.',
         onConfirm: () async {
-          await ref.read(serviceLogDetailNotifierProvider((vehicleId, id))).deleteServiceLog(id);
+          await ref
+              .read(serviceLogDetailNotifierProvider((vehicleId, id)))
+              .deleteServiceLog(id);
           if (context.mounted) {
             ref.read(serviceLogListProvider(vehicleId).notifier).refresh();
             context.pop();
           }
         },
       ),
+    );
+  }
+}
+
+class _Sheet extends StatelessWidget {
+  const _Sheet({required this.serviceLog});
+
+  final ServiceLog serviceLog;
+
+  @override
+  Widget build(BuildContext context) {
+    final description = serviceLog.description?.trim();
+    final mechanic = serviceLog.mechanic?.trim();
+    final notes = serviceLog.notes?.trim();
+
+    return PaperSheet(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'KSIĄŻKA SERWISOWA',
+              style: AppText.micro(color: AppColors.paperInkFaded),
+            ),
+            Text(
+              Fmt.date(serviceLog.date),
+              style: AppText.micro(color: AppColors.paperInkFaded),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          Fmt.kmUnit(serviceLog.mileage),
+          style: AppText.data(
+            size: 27,
+            weight: FontWeight.w600,
+            color: AppColors.paperInk,
+          ).copyWith(letterSpacing: 0),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${Fmt.date(serviceLog.date)} · ${Fmt.weekday(serviceLog.date)}',
+          style: AppText.micro(color: AppColors.paperInkFaded),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          serviceLog.serviceType.toUpperCase(),
+          style: AppText.condensed(size: 26, color: AppColors.paperInk)
+              .copyWith(height: 1),
+        ),
+        const PaperRule(),
+        const SizedBox(height: 8),
+        DataPlate(
+          onPaper: true,
+          padding: EdgeInsets.zero,
+          rows: [
+            if (description != null && description.isNotEmpty)
+              DataPlateRow('ZAKRES', description),
+            DataPlateRow('PRZEBIEG', Fmt.kmUnit(serviceLog.mileage)),
+            if (mechanic != null && mechanic.isNotEmpty)
+              DataPlateRow('MECHANIK', mechanic),
+            DataPlateRow('KOSZT', Fmt.money(serviceLog.totalCost),
+                emphasis: true),
+          ],
+        ),
+        if (notes != null && notes.isNotEmpty) ...[
+          const PaperRule(margin: EdgeInsets.fromLTRB(0, 4, 0, 2)),
+          const SizedBox(height: 10),
+          Text('NOTATKI', style: AppText.micro(color: AppColors.paperInkFaded)),
+          const SizedBox(height: 4),
+          Text(
+            notes,
+            style: AppText.body(size: 13.5, color: const Color(0xFF2C2820))
+                .copyWith(height: 1.5),
+          ),
+        ],
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 16, right: 4),
+            child: StampBadge(
+              label: 'WYKONANO',
+              sublabel: Fmt.date(serviceLog.date),
+              variant: StampVariant.wykonanoPaper,
+              rotationDegrees: -3,
+            ),
+          ),
+        ),
+        PaperSignatureLine(
+          left: mechanic != null && mechanic.isNotEmpty
+              ? 'WARSZTAT / $mechanic'
+              : 'WARSZTAT / PL',
+          right: 'FORM 02-A · REV. 03',
+        ),
+      ],
     );
   }
 }

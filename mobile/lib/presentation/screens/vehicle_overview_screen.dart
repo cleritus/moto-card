@@ -1,26 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../config/theme.dart';
 import '../../domain/entities/fuel_log.dart';
 import '../../domain/entities/reminder.dart';
+import '../../domain/entities/vehicle.dart';
 import '../providers/fuel_log_provider.dart';
 import '../providers/providers.dart';
 import '../providers/reminder_provider.dart';
 import '../providers/service_log_provider.dart';
 import '../providers/vehicle_provider.dart';
-import '../utils/date_utils.dart' as app_date_utils;
-import '../widgets/data_list_tile.dart';
-import '../widgets/info_card.dart';
-import '../widgets/info_row.dart';
+import '../utils/format.dart';
+import '../utils/interval_status.dart';
+import '../widgets/data_plate.dart';
+import '../widgets/double_rule.dart';
+import '../widgets/error_view.dart';
+import '../widgets/garage_button.dart';
+import '../widgets/hazard_banner.dart';
+import '../widgets/interval_bar.dart';
+import '../widgets/interval_gauge.dart';
 import '../widgets/section_header.dart';
-import '../widgets/stat_card.dart';
+import '../widgets/workshop_card.dart';
 
-/// Tab 0 of the vehicle shell — profile with key statistics.
+/// §6 row 3 — the vehicle. Designed hero (oil black, never a photo per §9),
+/// the worst-interval dial, and the INTERWAŁY section with one bar per
+/// mileage alert (§7).
 class VehicleOverviewScreen extends ConsumerWidget {
-  const VehicleOverviewScreen({super.key, required this.id});
+  const VehicleOverviewScreen({
+    super.key,
+    required this.id,
+    this.onOpenServiceBook,
+  });
 
   final String id;
+
+  /// Switches the parent shell to the SERWIS tab instead of pushing a
+  /// second, nav-less instance of that screen on top of the stack.
+  final VoidCallback? onOpenServiceBook;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,18 +50,7 @@ class VehicleOverviewScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text((state.vehicle?.name ?? 'Pojazd').toUpperCase()),
-        actions: [
-          if (state.vehicle != null)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              tooltip: 'Edytuj',
-              onPressed: () => context.push('/vehicles/$id/edit'),
-            ),
-        ],
-      ),
-      body: _buildBody(context, ref, state),
+      body: SafeArea(bottom: false, child: _buildBody(context, ref, state)),
     );
   }
 
@@ -53,192 +59,217 @@ class VehicleOverviewScreen extends ConsumerWidget {
     switch (state.status) {
       case VehicleDetailStatus.loading:
       case VehicleDetailStatus.initial:
-        return const Center(child: CircularProgressIndicator());
+        return const LoadingView(label: 'WYKAZ POJAZDU');
       case VehicleDetailStatus.error:
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline,
-                  size: 64, color: Theme.of(context).colorScheme.error),
-              const SizedBox(height: 16),
-              Text(
-                state.errorMessage ?? 'Wystąpił błąd',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () =>
-                    ref.read(vehicleDetailNotifierProvider(id)).loadVehicle(id),
-                icon: const Icon(Icons.refresh),
-                label: const Text('SPRÓBUJ PONOWNIE'),
-              ),
-            ],
-          ),
+        return ErrorView(
+          detail: state.errorMessage,
+          onRetry: () =>
+              ref.read(vehicleDetailNotifierProvider(id)).loadVehicle(id),
         );
       case VehicleDetailStatus.loaded:
         if (state.vehicle == null) {
-          return const Center(child: Text('Pojazd nie został znaleziony'));
+          return const EmptyVehicle();
         }
-        final vehicle = state.vehicle!;
+        return _loaded(context, ref, state.vehicle!);
+    }
+  }
 
-        final fuelState = ref.watch(fuelLogListProvider(id));
-        final serviceState = ref.watch(serviceLogListProvider(id));
-        final reminderState = ref.watch(
-          reminderListProvider((id, ReminderFilter.active)),
-        );
+  Widget _loaded(BuildContext context, WidgetRef ref, Vehicle vehicle) {
+    final fuelState = ref.watch(fuelLogListProvider(id));
+    final serviceState = ref.watch(serviceLogListProvider(id));
+    final reminderState = ref.watch(
+      reminderListProvider((id, ReminderFilter.active)),
+    );
 
-        final fuelLogs = fuelState.fuelLogs;
-        final totalFuel = fuelLogs.fold<double>(0, (s, f) => s + f.fuelAmount);
-        final consumption = _averageConsumption(fuelLogs);
-        final activeReminders = reminderState.reminders;
-        final nextReminder = _nextReminder(activeReminders);
+    final fuelLogs = fuelState.fuelLogs;
+    final consumption = _averageConsumption(fuelLogs);
+    final activeReminders = reminderState.reminders;
 
-        if (vehicle.mileage != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _checkMileageReminders(ref, activeReminders, vehicle.mileage!);
-          });
-        }
+    final intervals = activeReminders
+        .map((r) => IntervalStatus.forReminder(r, vehicle.mileage))
+        .whereType<IntervalStatus>()
+        .toList()
+      ..sort((a, b) => b.percent.compareTo(a.percent));
+    final worst = IntervalStatus.worst(intervals);
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            await ref.read(vehicleDetailNotifierProvider(id)).loadVehicle(id);
-            ref.read(fuelLogListProvider(id).notifier).refresh();
-            ref.read(serviceLogListProvider(id).notifier).refresh();
-            ref
-                .read(reminderListProvider((id, ReminderFilter.active)).notifier)
-                .refresh();
-          },
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
+    if (vehicle.mileage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkMileageReminders(ref, activeReminders, vehicle.mileage!);
+      });
+    }
+
+    return RefreshIndicator(
+      color: AppColors.oxideLit,
+      backgroundColor: AppColors.dirtyBlack,
+      onRefresh: () async {
+        await ref.read(vehicleDetailNotifierProvider(id)).loadVehicle(id);
+        ref.read(fuelLogListProvider(id).notifier).refresh();
+        ref.read(serviceLogListProvider(id).notifier).refresh();
+        ref
+            .read(reminderListProvider((id, ReminderFilter.active)).notifier)
+            .refresh();
+      },
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 48),
+        children: [
+          _TopMarkings(onEdit: () => context.push('/vehicles/$id/edit')),
+          _Hero(vehicle: vehicle, worst: worst),
+          if (worst != null && worst.isOverdue)
+            HazardBanner(
+              text: 'SERWIS ZALEGŁY / ${Fmt.km(worst.overdueBy)} KM',
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppGeo.screenMargin,
+              18,
+              AppGeo.screenMargin,
+              0,
+            ),
+            child: Column(
+              children: [
+                GarageButton(
+                  label: '+ ZAPISZ SERWIS',
+                  onPressed: () =>
+                      context.push('/vehicles/$id/service-logs/new'),
+                ),
+                const SizedBox(height: 12),
+                GarageButton.ghost(
+                  label: 'KSIĄŻKA SERWISOWA',
+                  trailingArrow: true,
+                  onPressed: onOpenServiceBook ??
+                      () => context.push('/vehicles/$id/service-logs'),
+                ),
+              ],
+            ),
+          ),
+          if (intervals.isNotEmpty) ...[
+            SectionHeader(
+              'INTERWAŁY',
+              tag: '${intervals.length} POZYCJE',
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppGeo.screenMargin,
+              ),
+              child: WorkshopCard(
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.fromLTRB(14, 15, 14, 15),
+                child: Column(
                   children: [
-                    Expanded(
-                      child: StatCard(
-                        label: 'Przebieg',
-                        value: vehicle.mileage != null
-                            ? '${vehicle.mileage}'
-                            : '—',
-                        unit: 'km',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: StatCard(
-                        label: 'Paliwo',
-                        value: '${totalFuel.round()} L',
-                        unit: 'łącznie',
-                      ),
-                    ),
+                    for (int i = 0; i < intervals.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 17),
+                      IntervalBar(status: intervals[i]),
+                    ],
                   ],
                 ),
               ),
-              if (consumption != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.darkSurface,
-                      border: Border.all(color: AppColors.darkBorder),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
+            ),
+          ],
+          if (consumption != null) ...[
+            SectionHeader(
+              'SPALANIE',
+              tag: '${fuelLogs.length} TANKOWAŃ',
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppGeo.screenMargin,
+              ),
+              child: WorkshopCard(
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.local_fire_department,
-                            color: AppColors.darkPrimary, size: 20),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'SPALANIE',
-                          style: TextStyle(
-                            fontSize: 11,
-                            letterSpacing: 2,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkLabel,
-                          ),
-                        ),
-                        const Spacer(),
+                        Text('ŚREDNIA', style: AppText.label()),
+                        const SizedBox(height: 6),
                         Text(
-                          '${consumption.toStringAsFixed(1)} L/100km',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkOnBackground,
-                          ),
+                          Fmt.decimal1(consumption),
+                          style: AppText.data(size: 33, weight: FontWeight.w600)
+                              .copyWith(letterSpacing: 0, height: 1),
                         ),
                       ],
                     ),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: StatCard(
-                        label: 'Serwisy',
-                        value: '${serviceState.serviceLogs.length}',
-                        compact: true,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: StatCard(
-                        label: 'Tankowań',
-                        value: '${fuelLogs.length}',
-                        compact: true,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: StatCard(
-                        label: 'Alerty',
-                        value: '${activeReminders.length}',
-                        compact: true,
-                      ),
-                    ),
+                    const Spacer(),
+                    Text('L / 100 KM', style: AppText.micro()),
                   ],
                 ),
               ),
-              if (nextReminder != null) ...[
-                const SectionHeader('Następne przypomnienie'),
-                DataListTile(
-                  primary: nextReminder.title,
-                  secondary: _reminderSubtitle(nextReminder),
-                  trailing: _reminderDueLabel(nextReminder),
+            ),
+          ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppGeo.screenMargin,
+              AppGeo.sectionGap,
+              AppGeo.screenMargin,
+              0,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: CounterTile(
+                    label: 'SERWISY',
+                    value: Fmt.serial(serviceState.serviceLogs.length, width: 2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: CounterTile(
+                    label: 'TANKOWAŃ',
+                    value: Fmt.serial(fuelLogs.length, width: 2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: CounterTile(
+                    label: 'ALERTY',
+                    value: Fmt.serial(activeReminders.length, width: 2),
+                    highlight: activeReminders.isNotEmpty,
+                  ),
                 ),
               ],
-              const SectionHeader('Informacje'),
-              InfoCard(
-                title: 'Pojazd',
-                icon: Icons.info_outline,
-                children: [
-                  InfoRow(label: 'Marka', value: vehicle.make),
-                  InfoRow(label: 'Model', value: vehicle.vehicleModel),
-                  InfoRow(label: 'Rok', value: vehicle.year.toString()),
-                  InfoRow(label: 'Nr rejestracyjny', value: vehicle.licensePlate),
-                  if (vehicle.vin != null)
-                    InfoRow(label: 'VIN', value: vehicle.vin!),
+            ),
+          ),
+          const SectionHeader('DANE POJAZDU', tag: 'TABLICZKA', bottomGap: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppGeo.screenMargin,
+            ),
+            child: WorkshopCard(
+              margin: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: DataPlate(
+                rows: [
+                  DataPlateRow('MARKA', vehicle.make),
+                  DataPlateRow('MODEL', vehicle.vehicleModel),
+                  DataPlateRow('ROK', '${vehicle.year}'),
+                  if (vehicle.licensePlate.isNotEmpty)
+                    DataPlateRow('NR REJ.', vehicle.licensePlate.toUpperCase()),
+                  if (vehicle.vin != null && vehicle.vin!.isNotEmpty)
+                    DataPlateRow('VIN', vehicle.vin!.toUpperCase()),
                   if (vehicle.purchaseDate != null)
-                    InfoRow(
-                      label: 'Data zakupu',
-                      value: app_date_utils.DateUtils.formatDate(
-                          vehicle.purchaseDate!),
-                    ),
-                  if (vehicle.notes != null)
-                    InfoRow(label: 'Notatki', value: vehicle.notes!),
+                    DataPlateRow('ZAKUP', Fmt.date(vehicle.purchaseDate!)),
                 ],
               ),
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
-        );
-    }
+          if (vehicle.notes != null && vehicle.notes!.isNotEmpty) ...[
+            const SectionHeader('NOTATKI', bottomGap: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppGeo.screenMargin,
+              ),
+              child: WorkshopCard(
+                margin: EdgeInsets.zero,
+                child: Text(vehicle.notes!, style: AppText.body()),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   /// Average fuel consumption (L/100km) from consecutive entries sorted by
@@ -272,38 +303,145 @@ class VehicleOverviewScreen extends ConsumerWidget {
       }
     }
   }
+}
 
-  Reminder? _nextReminder(List<Reminder> reminders) {
-    final pending = reminders.where((r) => !r.isCompleted).toList()
-      ..sort((a, b) {
-        if (a.dueDate == null && b.dueDate == null) return 0;
-        if (a.dueDate == null) return 1;
-        if (b.dueDate == null) return -1;
-        return a.dueDate!.compareTo(b.dueDate!);
-      });
-    return pending.isEmpty ? null : pending.first;
+class _TopMarkings extends StatelessWidget {
+  const _TopMarkings({required this.onEdit});
+
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppGeo.screenMargin,
+        10,
+        AppGeo.screenMargin,
+        0,
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('MOTO / POJAZD', style: AppText.micro()),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onEdit,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  child: Text(
+                    'EDYTUJ',
+                    style: AppText.micro(color: AppColors.oxideLit),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const DoubleRule(margin: EdgeInsets.only(top: 6)),
+        ],
+      ),
+    );
   }
+}
 
-  String _reminderSubtitle(Reminder reminder) {
-    if (reminder.type == ReminderType.mileage && reminder.dueMileage != null) {
-      return 'PRZY ${reminder.dueMileage} KM';
-    }
-    if (reminder.dueDate != null) {
-      final d = reminder.dueDate!;
-      return '${d.day.toString().padLeft(2, '0')}.'
-          '${d.month.toString().padLeft(2, '0')}.${d.year}';
-    }
-    return '';
+/// Designed hero: oil black and type. Never the owner's photograph (§9).
+class _Hero extends StatelessWidget {
+  const _Hero({required this.vehicle, required this.worst});
+
+  final Vehicle vehicle;
+  final IntervalStatus? worst;
+
+  @override
+  Widget build(BuildContext context) {
+    final spec = [
+      vehicle.vehicleModel.toUpperCase(),
+      '${vehicle.year}',
+      if (vehicle.licensePlate.isNotEmpty) vehicle.licensePlate.toUpperCase(),
+    ].join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppGeo.screenMargin,
+        18,
+        AppGeo.screenMargin,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            vehicle.make.toUpperCase(),
+            style: AppText.label(size: 10).copyWith(letterSpacing: 10 * 0.18),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            vehicle.name.toUpperCase(),
+            style: AppText.display(size: 44),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            spec,
+            style: AppText.data(size: 11.5, color: AppColors.fadedInk)
+                .copyWith(letterSpacing: 11.5 * 0.1),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      vehicle.mileage != null ? Fmt.km(vehicle.mileage!) : '—',
+                      style: AppText.dataXl(size: 44),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'KM · STAN ${Fmt.date(vehicle.updatedAt)}',
+                      style: AppText.micro()
+                          .copyWith(letterSpacing: 9.5 * 0.18),
+                    ),
+                  ],
+                ),
+              ),
+              if (worst != null) ...[
+                const SizedBox(width: 14),
+                IntervalGauge(status: worst!),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
   }
+}
 
-  String? _reminderDueLabel(Reminder reminder) {
-    if (reminder.dueDate == null) return null;
-    final days = reminder.dueDate!
-        .difference(DateTime(
-            DateTime.now().year, DateTime.now().month, DateTime.now().day))
-        .inDays;
-    if (days < 0) return 'ZALEGŁE';
-    if (days == 0) return 'DZIŚ';
-    return 'za $days dni';
+/// "Vehicle not found" — kept separate so the message stays in voice.
+class EmptyVehicle extends StatelessWidget {
+  const EmptyVehicle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const DoubleRule(),
+            const SizedBox(height: 16),
+            Text('STANOWISKO PUSTE.', style: AppText.h1(size: 26)),
+            const SizedBox(height: 10),
+            Text(
+              'Tej maszyny nie ma już w garażu.',
+              style: AppText.body(color: AppColors.fadedInk),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

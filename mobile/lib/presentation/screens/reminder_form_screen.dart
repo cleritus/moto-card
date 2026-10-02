@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../domain/entities/reminder.dart';
 import '../providers/reminder_provider.dart';
-import '../widgets/section_header.dart';
+import '../widgets/error_view.dart';
+import '../widgets/garage_app_bar.dart';
+import '../widgets/garage_button.dart';
+import '../widgets/labeled_field.dart';
 
 class ReminderFormScreen extends ConsumerStatefulWidget {
   final String vehicleId;
@@ -216,158 +219,165 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
       }
     });
 
+    final isEdit = widget.id != null;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-            widget.id != null ? 'EDYTUJ PRZYPOMNIENIE' : 'NOWE PRZYPOMNIENIE'),
+      appBar: GarageAppBar(
+        title: isEdit ? 'EDYTUJ ZLECENIE' : 'NOWE ZLECENIE',
+        subtitle: 'FORM 04-A · TABLICA ALERTÓW',
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppGeo.screenMargin,
+            0,
+            AppGeo.screenMargin,
+            32,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SectionHeader('Dane podstawowe', padded: false),
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Tytuł',
-                    prefixIcon: Icon(Icons.label),
-                    hintText: 'np. Wymiana oleju',
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Podaj tytuł';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                SegmentedButton<ReminderType>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ReminderType.date,
-                      label: Text('Data'),
-                      icon: Icon(Icons.event),
-                    ),
-                    ButtonSegment(
-                      value: ReminderType.mileage,
-                      label: Text('Przebieg'),
-                      icon: Icon(Icons.speed),
-                    ),
-                  ],
-                  selected: {_selectedType},
-                  onSelectionChanged: (Set<ReminderType> selection) {
-                    setState(() {
-                      _selectedType = selection.first;
-                      _typeController.text = _getTypeLabel(_selectedType);
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                if (_selectedType == ReminderType.date) ...[
-                  TextFormField(
-                    controller: _dueDateController,
+                const FormSection(title: 'ZLECENIE', code: 'SEKCJA 1'),
+                LabeledField(
+                  label: 'CZYNNOŚĆ',
+                  child: TextFormField(
+                    controller: _titleController,
+                    style: AppText.data(size: 14.5),
                     decoration: const InputDecoration(
-                      labelText: 'Data przypomnienia',
-                      prefixIcon: Icon(Icons.calendar_today),
-                      hintText: 'dd.mm.rrrr',
+                      hintText: 'np. Olej silnikowy',
                     ),
-                    readOnly: true,
-                    onTap: _selectDate,
+                    textCapitalization: TextCapitalization.sentences,
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Wybierz datę';
+                        return 'Podaj tytuł';
                       }
                       return null;
                     },
                   ),
-                ] else ...[
-                  TextFormField(
-                    controller: _dueMileageController,
-                    decoration: const InputDecoration(
-                      labelText: 'Przebieg (km)',
-                      prefixIcon: Icon(Icons.speed),
-                      hintText: 'np. 150000',
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Podaj przebieg';
-                      }
-                      final mileage = int.tryParse(value.trim());
-                      if (mileage == null || mileage < 0) {
-                        return 'Podaj prawidłowy przebieg';
-                      }
-                      return null;
+                ),
+                LabeledField(
+                  label: 'WYZWALACZ',
+                  child: SegmentedButton<ReminderType>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: ReminderType.date,
+                        label: Text('DATA'),
+                      ),
+                      ButtonSegment(
+                        value: ReminderType.mileage,
+                        label: Text('PRZEBIEG'),
+                      ),
+                    ],
+                    selected: {_selectedType},
+                    onSelectionChanged: (Set<ReminderType> selection) {
+                      setState(() {
+                        _selectedType = selection.first;
+                        _typeController.text = _getTypeLabel(_selectedType);
+                      });
                     },
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _intervalKmController,
-                    decoration: const InputDecoration(
-                      labelText: 'Interwał (km, opcjonalne)',
-                      prefixIcon: Icon(Icons.autorenew),
-                      hintText: 'np. 5000',
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
+                ),
+                if (_selectedType == ReminderType.date)
+                  LabeledField(
+                    label: 'TERMIN',
+                    child: TextFormField(
+                      controller: _dueDateController,
+                      style: AppText.data(size: 14.5),
+                      decoration: const InputDecoration(hintText: 'dd.mm.rrrr'),
+                      readOnly: true,
+                      onTap: _selectDate,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Wybierz datę';
+                        }
                         return null;
-                      }
-                      final interval = int.tryParse(value.trim());
-                      if (interval == null || interval < 0) {
-                        return 'Podaj prawidłowy interwał';
-                      }
-                      return null;
-                    },
+                      },
+                    ),
+                  )
+                else ...[
+                  LabeledField(
+                    label: 'PRZY PRZEBIEGU / KM',
+                    child: TextFormField(
+                      controller: _dueMileageController,
+                      style: AppText.data(size: 14.5),
+                      decoration: const InputDecoration(hintText: 'np. 24000'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Podaj przebieg';
+                        }
+                        final mileage = int.tryParse(value.trim());
+                        if (mileage == null || mileage < 0) {
+                          return 'Podaj prawidłowy przebieg';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  LabeledField(
+                    label: 'INTERWAŁ / KM',
+                    hint: 'opcjonalne',
+                    child: TextFormField(
+                      controller: _intervalKmController,
+                      style: AppText.data(size: 14.5),
+                      decoration: const InputDecoration(hintText: 'np. 5000'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return null;
+                        }
+                        final interval = int.tryParse(value.trim());
+                        if (interval == null || interval < 0) {
+                          return 'Podaj prawidłowy interwał';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(
+                      'Interwał włącza pasek zużycia na ekranie pojazdu.',
+                      style: AppText.body(
+                        size: 13,
+                        color: AppColors.fadedInk,
+                      ),
+                    ),
                   ),
                 ],
-                const SectionHeader('Szczegóły', padded: false),
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notatki (opcjonalne)',
-                    prefixIcon: Icon(Icons.note),
-                    hintText: 'np. Przygotuj części zamienn wcześniej',
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
-                if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: AppColors.darkAccent),
-                      textAlign: TextAlign.center,
+                const FormSection(title: 'SZCZEGÓŁY', code: 'SEKCJA 2'),
+                LabeledField(
+                  label: 'NOTATKI',
+                  hint: 'opcjonalne',
+                  child: TextFormField(
+                    controller: _notesController,
+                    style: AppText.body(size: 14.5),
+                    decoration: const InputDecoration(
+                      hintText: 'np. Zamówić części wcześniej.',
                     ),
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: 3,
                   ),
-                FilledButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.darkOnPrimary,
-                          ),
-                        )
-                      : Text(widget.id != null
-                          ? 'ZAPISZ ZMIANY'
-                          : 'DODAJ PRZYPOMNIENIE'),
                 ),
-                const SizedBox(height: 16),
-                OutlinedButton(
+                const SizedBox(height: 28),
+                if (_errorMessage != null) ...[
+                  FaultStrip(message: _errorMessage!),
+                  const SizedBox(height: 20),
+                ],
+                GarageButton(
+                  label: isEdit ? 'ZAPISZ ZMIANY' : 'POWIEŚ ZLECENIE',
+                  isLoading: _isLoading,
+                  onPressed: _isLoading ? null : _submit,
+                ),
+                const SizedBox(height: 14),
+                GarageButton.ghost(
+                  label: 'ANULUJ',
                   onPressed: _isLoading ? null : () => context.pop(),
-                  child: const Text('ANULUJ'),
                 ),
               ],
             ),

@@ -1,19 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../config/theme.dart';
 import '../../domain/entities/reminder.dart';
 import '../providers/reminder_provider.dart';
-import '../utils/date_utils.dart' as app_date_utils;
+import '../providers/vehicle_provider.dart';
+import '../utils/format.dart';
+import '../utils/interval_status.dart';
+import '../widgets/data_plate.dart';
 import '../widgets/delete_confirmation_dialog.dart';
-import '../widgets/info_card.dart';
-import '../widgets/info_row.dart';
+import '../widgets/error_view.dart';
+import '../widgets/garage_app_bar.dart';
+import '../widgets/garage_button.dart';
+import '../widgets/hazard_banner.dart';
+import '../widgets/interval_bar.dart';
+import '../widgets/section_header.dart';
+import '../widgets/stamp_badge.dart';
+import '../widgets/workshop_card.dart';
 
+/// §6 row 7 — one work order, open.
 class ReminderDetailScreen extends ConsumerWidget {
+  const ReminderDetailScreen({
+    super.key,
+    required this.vehicleId,
+    required this.id,
+  });
+
   final String vehicleId;
   final String id;
-
-  const ReminderDetailScreen({super.key, required this.vehicleId, required this.id});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,209 +39,213 @@ class ReminderDetailScreen extends ConsumerWidget {
       (previous, next) {
         if (next.status == ReminderDetailStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(next.errorMessage ?? 'Wystąpił błąd')),
+            SnackBar(content: Text(next.errorMessage ?? 'Coś się zacięło.')),
           );
         }
       },
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('PRZYPOMNIENIE'),
-        actions: [
-          if (state.reminder != null)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => context.push('/vehicles/$vehicleId/reminders/$id/edit'),
-            ),
-          if (state.reminder != null)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () => _confirmDelete(context, ref),
-            ),
-        ],
-      ),
+      appBar: const GarageAppBar(title: 'ZLECENIE', subtitle: 'TABLICA ALERTÓW'),
       body: _buildBody(context, ref, state),
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, ReminderDetailState state) {
+  Widget _buildBody(
+      BuildContext context, WidgetRef ref, ReminderDetailState state) {
     switch (state.status) {
+      case ReminderDetailStatus.initial:
       case ReminderDetailStatus.loading:
-        return const Center(child: CircularProgressIndicator());
+        return const LoadingView();
+      case ReminderDetailStatus.error:
+        return ErrorView(
+          detail: state.errorMessage,
+          onRetry: () => ref
+              .read(reminderDetailNotifierProvider((vehicleId, id)))
+              .loadReminder(id),
+        );
       case ReminderDetailStatus.loaded:
-        if (state.reminder == null) {
-          return const Center(child: Text('Przypomnienie nie zostało znalezione'));
+        final reminder = state.reminder;
+        if (reminder == null) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Text('Tego zlecenia nie ma na tablicy.'),
+            ),
+          );
         }
-        final reminder = state.reminder!;
-        final isOverdue = reminder.type == ReminderType.date &&
-            reminder.dueDate != null &&
-            !reminder.isCompleted &&
-            reminder.dueDate!.isBefore(DateTime.now());
+
+        final mileage = ref.watch(vehicleDetailProvider(vehicleId)).vehicle?.mileage;
+        final status = IntervalStatus.forReminder(reminder, mileage);
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(bottom: 40),
           children: [
-            _buildCompletionCard(context, ref, reminder),
-            const SizedBox(height: 16),
-            InfoCard(
-              title: 'Informacje',
-              icon: reminder.type == ReminderType.date ? Icons.event : Icons.speed,
-              children: [
-                InfoRow(label: 'Tytuł', value: reminder.title),
-                InfoRow(label: 'Typ', value: reminder.type == ReminderType.date ? 'Data' : 'Przebieg'),
-                if (reminder.type == ReminderType.date && reminder.dueDate != null)
-                  InfoRow(
-                    label: 'Data przypomnienia',
-                    value: app_date_utils.DateUtils.formatDate(reminder.dueDate!),
-                    isOverdue: isOverdue,
-                  ),
-                if (reminder.type == ReminderType.mileage && reminder.dueMileage != null)
-                  InfoRow(label: 'Przebieg', value: '${reminder.dueMileage} km'),
-                if (reminder.type == ReminderType.mileage && reminder.intervalKm != null)
-                  InfoRow(label: 'Interwał', value: '${reminder.intervalKm} km'),
-                if (reminder.type == ReminderType.mileage && reminder.lastDoneMileage != null)
-                  InfoRow(
-                    label: 'Ostatnio wykonano',
-                    value: '${reminder.lastDoneMileage} km',
-                  ),
-                InfoRow(label: 'Status', value: reminder.isCompleted ? 'Ukończone' : 'Aktywne'),
-                if (reminder.isCompleted && reminder.completedAt != null)
-                  InfoRow(label: 'Ukończono', value: app_date_utils.DateUtils.formatDateTime(reminder.completedAt!)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (reminder.notes != null && reminder.notes!.isNotEmpty)
-              InfoCard(
-                title: 'Notatki',
-                icon: Icons.note,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppGeo.screenMargin,
+                20,
+                AppGeo.screenMargin,
+                0,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  InfoRow(label: '', value: reminder.notes!, wrap: true),
+                  Expanded(
+                    child: Text(
+                      reminder.title.toUpperCase(),
+                      style: AppText.h1(size: 30),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  _statusStamp(reminder, status),
                 ],
               ),
-            const SizedBox(height: 16),
-            InfoCard(
-              title: 'Szczegóły',
-              icon: Icons.description_outlined,
-              children: [
-                InfoRow(label: 'Utworzono', value: app_date_utils.DateUtils.formatDateTime(reminder.createdAt)),
-                InfoRow(label: 'Zaktualizowano', value: app_date_utils.DateUtils.formatDateTime(reminder.updatedAt)),
-              ],
             ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () => context.push('/vehicles/$vehicleId/reminders/$id/edit'),
-              icon: const Icon(Icons.edit),
-              label: const Text('EDYTUJ PRZYPOMNIENIE'),
-            ),
-          ],
-        );
-      case ReminderDetailStatus.error:
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
+            if (status != null && status.isOverdue)
+              HazardBanner(
+                text: 'ZALEGŁE / ${Fmt.km(status.overdueBy)} KM PO TERMINIE',
               ),
-              const SizedBox(height: 16),
-              Text(
-                state.errorMessage ?? 'Wystąpił błąd',
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () =>
-                    ref.read(reminderDetailNotifierProvider((vehicleId, id))).loadReminder(id),
-                icon: const Icon(Icons.refresh),
-                label: const Text('SPRÓBUJ PONOWNIE'),
-              ),
-            ],
-          ),
-        );
-      case ReminderDetailStatus.initial:
-        return const Center(child: CircularProgressIndicator());
-    }
-  }
-
-  Widget _buildCompletionCard(BuildContext context, WidgetRef ref, Reminder reminder) {
-    final isOverdue = reminder.type == ReminderType.date &&
-        reminder.dueDate != null &&
-        !reminder.isCompleted &&
-        reminder.dueDate!.isBefore(DateTime.now());
-
-    final Color accent;
-    final IconData icon;
-    final String label;
-    if (reminder.isCompleted) {
-      accent = Colors.green;
-      icon = Icons.check_circle;
-      label = 'UKOŃCZONE';
-    } else if (isOverdue) {
-      accent = AppColors.darkPrimary;
-      icon = Icons.warning_amber_rounded;
-      label = 'PO TERMINIE';
-    } else {
-      accent = AppColors.darkLabel;
-      icon = Icons.pending_outlined;
-      label = 'OCZEKUJĄCE';
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: accent.withAlpha(30),
-        border: Border.all(color: accent),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: accent, size: 22),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  letterSpacing: 2,
-                  fontWeight: FontWeight.bold,
-                  color: accent,
+            if (status != null) ...[
+              const SectionHeader('INTERWAŁ', bottomGap: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppGeo.screenMargin,
+                ),
+                child: WorkshopCard(
+                  margin: EdgeInsets.zero,
+                  padding: const EdgeInsets.fromLTRB(14, 15, 14, 15),
+                  child: IntervalBar(status: status),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              style: reminder.isCompleted
-                  ? FilledButton.styleFrom(
-                      backgroundColor: AppColors.darkSurfaceBright,
-                      foregroundColor: AppColors.darkOnBackground,
-                    )
-                  : null,
-              onPressed: () async {
-                final notifier =
-                    ref.read(reminderDetailNotifierProvider((vehicleId, id)));
-                if (reminder.isCompleted) {
-                  await notifier.markAsIncomplete(id);
-                } else {
-                  await notifier.markAsCompleted(id);
-                }
-                _refreshLists(ref);
-              },
-              child: Text(
-                reminder.isCompleted ? 'COFNIJ' : 'OZNACZ JAKO UKOŃCZONE',
+            const SectionHeader('ZLECENIE', tag: 'TABLICZKA', bottomGap: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppGeo.screenMargin,
+              ),
+              child: WorkshopCard(
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: DataPlate(
+                  rows: [
+                    DataPlateRow(
+                      'TYP',
+                      reminder.type == ReminderType.date ? 'DATA' : 'PRZEBIEG',
+                    ),
+                    if (reminder.type == ReminderType.date &&
+                        reminder.dueDate != null)
+                      DataPlateRow('TERMIN', Fmt.date(reminder.dueDate!)),
+                    if (reminder.type == ReminderType.mileage &&
+                        reminder.dueMileage != null)
+                      DataPlateRow('PRZY', Fmt.kmUnit(reminder.dueMileage!)),
+                    if (reminder.intervalKm != null)
+                      DataPlateRow('INTERWAŁ', Fmt.kmUnit(reminder.intervalKm!)),
+                    if (reminder.lastDoneMileage != null)
+                      DataPlateRow(
+                        'OSTATNIO',
+                        Fmt.kmUnit(reminder.lastDoneMileage!),
+                      ),
+                    DataPlateRow(
+                      'STATUS',
+                      reminder.isCompleted ? 'ODHACZONE' : 'OTWARTE',
+                    ),
+                    if (reminder.isCompleted && reminder.completedAt != null)
+                      DataPlateRow(
+                        'WYKONANO',
+                        Fmt.date(reminder.completedAt!),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+            if (reminder.notes != null && reminder.notes!.trim().isNotEmpty) ...[
+              const SectionHeader('NOTATKI', bottomGap: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppGeo.screenMargin,
+                ),
+                child: WorkshopCard(
+                  margin: EdgeInsets.zero,
+                  child: Text(reminder.notes!, style: AppText.body()),
+                ),
+              ),
+            ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppGeo.screenMargin,
+                AppGeo.sectionGap,
+                AppGeo.screenMargin,
+                0,
+              ),
+              child: Column(
+                children: [
+                  GarageButton(
+                    label: reminder.isCompleted
+                        ? 'COFNIJ ODHACZENIE'
+                        : 'ODHACZ / WYKONANE',
+                    onPressed: () async {
+                      final notifier = ref.read(
+                        reminderDetailNotifierProvider((vehicleId, id)),
+                      );
+                      if (reminder.isCompleted) {
+                        await notifier.markAsIncomplete(id);
+                      } else {
+                        await notifier.markAsCompleted(id);
+                      }
+                      _refreshLists(ref);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  GarageButton.ghost(
+                    label: 'EDYTUJ ZLECENIE',
+                    trailingArrow: true,
+                    onPressed: () =>
+                        context.push('/vehicles/$vehicleId/reminders/$id/edit'),
+                  ),
+                  const SizedBox(height: 12),
+                  GarageButton.danger(
+                    label: 'ZDEJMIJ Z TABLICY',
+                    onPressed: () => _confirmDelete(context, ref),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+    }
+  }
+
+  Widget _statusStamp(Reminder reminder, IntervalStatus? status) {
+    if (reminder.isCompleted) {
+      return const StampBadge(
+        label: 'WYKONANO',
+        variant: StampVariant.wykonano,
+      );
+    }
+    if (status != null) {
+      return StampBadge(
+        label: status.stampLabel,
+        variant: status.stampVariant,
+      );
+    }
+    if (reminder.type == ReminderType.date && reminder.dueDate != null) {
+      final now = DateTime.now();
+      final days = DateTime(reminder.dueDate!.year, reminder.dueDate!.month,
+              reminder.dueDate!.day)
+          .difference(DateTime(now.year, now.month, now.day))
+          .inDays;
+      if (days < 0) {
+        return const StampBadge(
+          label: 'ZALEGŁE',
+          variant: StampVariant.zalegle,
+        );
+      }
+      if (days <= 7) {
+        return const StampBadge(label: 'TERMIN', variant: StampVariant.termin);
+      }
+    }
+    return const StampBadge(label: 'OTWARTE', variant: StampVariant.neutral);
   }
 
   void _refreshLists(WidgetRef ref) {
@@ -238,15 +257,26 @@ class ReminderDetailScreen extends ConsumerWidget {
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     showDialog<bool>(
       context: context,
-      builder: (context) => DeleteConfirmationDialog(
-        title: 'Usuń przypomnienie',
-        message: 'Czy na pewno chcesz usunąć to przypomnienie?',
+      builder: (dialogContext) => DeleteConfirmationDialog(
+        title: 'ZDEJMIJ ZLECENIE',
+        message: 'Usunąć to zlecenie z tablicy?',
+        confirmLabel: 'ZDEJMIJ',
         onConfirm: () async {
-          final isCompleted = ref.read(reminderDetailProvider((vehicleId, id))).reminder?.isCompleted ?? false;
-          await ref.read(reminderDetailNotifierProvider((vehicleId, id))).deleteReminder(id);
+          final isCompleted = ref
+                  .read(reminderDetailProvider((vehicleId, id)))
+                  .reminder
+                  ?.isCompleted ??
+              false;
+          await ref
+              .read(reminderDetailNotifierProvider((vehicleId, id)))
+              .deleteReminder(id);
           if (context.mounted) {
-            final filter = isCompleted ? ReminderFilter.completed : ReminderFilter.active;
-            ref.read(reminderListProvider((vehicleId, filter)).notifier).refresh();
+            final filter = isCompleted
+                ? ReminderFilter.completed
+                : ReminderFilter.active;
+            ref
+                .read(reminderListProvider((vehicleId, filter)).notifier)
+                .refresh();
             context.pop();
           }
         },

@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../domain/entities/fuel_log.dart';
 import '../providers/fuel_log_provider.dart';
-import '../widgets/section_header.dart';
+import '../widgets/error_view.dart';
+import '../widgets/garage_app_bar.dart';
+import '../widgets/garage_button.dart';
+import '../widgets/labeled_field.dart';
 
 class FuelLogFormScreen extends ConsumerStatefulWidget {
   final String vehicleId;
@@ -159,140 +162,142 @@ class _FuelLogFormScreenState extends ConsumerState<FuelLogFormScreen> {
       }
     });
 
+    final isEdit = widget.id != null;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.id != null ? 'EDYTUJ TANKOWANIE' : 'NOWE TANKOWANIE'),
+      appBar: GarageAppBar(
+        title: isEdit ? 'EDYTUJ TANKOWANIE' : 'NOWE TANKOWANIE',
+        subtitle: 'FORM 03-A · REJESTR PALIWA',
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppGeo.screenMargin,
+            0,
+            AppGeo.screenMargin,
+            32,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SectionHeader('Dane podstawowe', padded: false),
-                TextFormField(
-                  controller: _dateController,
-                  decoration: const InputDecoration(
-                    labelText: 'Data',
-                    prefixIcon: Icon(Icons.calendar_today),
-                    hintText: 'dd.mm.rrrr',
+                const FormSection(title: 'DATOWNIK', code: 'SEKCJA 1'),
+                LabeledField(
+                  label: 'DATA',
+                  child: TextFormField(
+                    controller: _dateController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'dd.mm.rrrr'),
+                    readOnly: true,
+                    onTap: _selectDate,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Wybierz datę';
+                      }
+                      return null;
+                    },
                   ),
-                  readOnly: true,
-                  onTap: _selectDate,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Wybierz datę';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _mileageController,
-                  decoration: const InputDecoration(
-                    labelText: 'Przebieg (km)',
-                    prefixIcon: Icon(Icons.speed),
-                    hintText: 'np. 15000',
+                LabeledField(
+                  label: 'PRZEBIEG / KM',
+                  child: TextFormField(
+                    controller: _mileageController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. 18430'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Podaj przebieg';
+                      }
+                      final mileage = int.tryParse(value.trim());
+                      if (mileage == null || mileage < 0) {
+                        return 'Podaj prawidłowy przebieg';
+                      }
+                      return null;
+                    },
                   ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Podaj przebieg';
-                    }
-                    final mileage = int.tryParse(value.trim());
-                    if (mileage == null || mileage < 0) {
-                      return 'Podaj prawidłowy przebieg';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _fuelAmountController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ilość paliwa (L)',
-                    prefixIcon: Icon(Icons.local_gas_station),
-                    hintText: 'np. 15.5',
+                const FormSection(title: 'ROZLICZENIE', code: 'SEKCJA 2'),
+                LabeledField(
+                  label: 'PALIWO / L',
+                  child: TextFormField(
+                    controller: _fuelAmountController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. 15.5'),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}'),
+                      ),
+                    ],
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Podaj ilość paliwa';
+                      }
+                      final amount = double.tryParse(value.trim());
+                      if (amount == null || amount <= 0) {
+                        return 'Podaj prawidłową ilość paliwa';
+                      }
+                      return null;
+                    },
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                  ],
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Podaj ilość paliwa';
-                    }
-                    final amount = double.tryParse(value.trim());
-                    if (amount == null || amount <= 0) {
-                      return 'Podaj prawidłową ilość paliwa';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _totalCostController,
-                  decoration: const InputDecoration(
-                    labelText: 'Koszt (zł)',
-                    prefixIcon: Icon(Icons.attach_money),
-                    hintText: 'np. 120.50',
+                LabeledField(
+                  label: 'KOSZT / ZŁ',
+                  child: TextFormField(
+                    controller: _totalCostController,
+                    style: AppText.data(size: 14.5),
+                    decoration: const InputDecoration(hintText: 'np. 120.50'),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}'),
+                      ),
+                    ],
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Podaj koszt';
+                      }
+                      final cost = double.tryParse(value.trim());
+                      if (cost == null || cost < 0) {
+                        return 'Podaj prawidłowy koszt';
+                      }
+                      return null;
+                    },
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                  ],
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Podaj koszt';
-                    }
-                    final cost = double.tryParse(value.trim());
-                    if (cost == null || cost < 0) {
-                      return 'Podaj prawidłowy koszt';
-                    }
-                    return null;
-                  },
                 ),
-                const SectionHeader('Szczegóły', padded: false),
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notatki (opcjonalne)',
-                    prefixIcon: Icon(Icons.note),
-                    hintText: 'np. Tankowanie na stacji Shell',
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
-                if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(color: AppColors.darkAccent),
-                      textAlign: TextAlign.center,
+                const FormSection(title: 'SZCZEGÓŁY', code: 'SEKCJA 3'),
+                LabeledField(
+                  label: 'NOTATKI',
+                  hint: 'opcjonalne',
+                  child: TextFormField(
+                    controller: _notesController,
+                    style: AppText.body(size: 14.5),
+                    decoration: const InputDecoration(
+                      hintText: 'np. Stacja przy obwodnicy.',
                     ),
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: 3,
                   ),
-                FilledButton(
-                  onPressed: _isLoading ? null : _submit,
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.darkOnPrimary,
-                          ),
-                        )
-                      : Text(widget.id != null ? 'ZAPISZ ZMIANY' : 'DODAJ TANKOWANIE'),
                 ),
-                const SizedBox(height: 16),
-                OutlinedButton(
+                const SizedBox(height: 28),
+                if (_errorMessage != null) ...[
+                  FaultStrip(message: _errorMessage!),
+                  const SizedBox(height: 20),
+                ],
+                GarageButton(
+                  label: isEdit ? 'ZAPISZ ZMIANY' : 'ZAPISZ WPIS',
+                  isLoading: _isLoading,
+                  onPressed: _isLoading ? null : _submit,
+                ),
+                const SizedBox(height: 14),
+                GarageButton.ghost(
+                  label: 'ANULUJ',
                   onPressed: _isLoading ? null : () => context.pop(),
-                  child: const Text('ANULUJ'),
                 ),
               ],
             ),

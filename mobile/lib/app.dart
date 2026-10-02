@@ -13,7 +13,9 @@ class MotoApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Moto Service Card',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      // DIRTY GARAGE is a single dark theme by design (§1) — there is no
+      // light variant, so both slots carry it and the mode is pinned.
+      theme: AppTheme.darkTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark,
       routerConfig: router,
