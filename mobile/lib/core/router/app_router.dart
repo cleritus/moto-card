@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../presentation/providers/auth_provider.dart';
+import '../../presentation/screens/ai_assistant_screen.dart';
 import '../../presentation/screens/fuel_log_detail_screen.dart';
 import '../../presentation/screens/fuel_log_form_screen.dart';
 import '../../presentation/screens/fuel_log_list_screen.dart';
@@ -14,6 +15,7 @@ import '../../presentation/screens/service_log_list_screen.dart';
 import '../../presentation/screens/reminder_detail_screen.dart';
 import '../../presentation/screens/reminder_form_screen.dart';
 import '../../presentation/screens/reminder_list_screen.dart';
+import '../../presentation/screens/settings_screen.dart';
 import '../../presentation/screens/vehicle_list_screen.dart';
 import '../../presentation/screens/vehicle_shell_screen.dart';
 import '../../presentation/screens/vehicle_form_screen.dart';
@@ -51,6 +53,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/ai-assistant',
+        builder: (context, state) => const AiAssistantScreen(),
       ),
       GoRoute(
         path: '/vehicles',

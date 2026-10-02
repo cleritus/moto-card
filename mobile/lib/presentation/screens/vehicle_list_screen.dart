@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/theme.dart';
 import '../../domain/entities/vehicle.dart';
-import '../providers/auth_provider.dart';
 import '../providers/vehicle_provider.dart';
 import '../utils/format.dart';
 import '../widgets/delete_confirmation_dialog.dart';
@@ -41,13 +40,23 @@ class VehicleListScreen extends ConsumerWidget {
           children: [
             ScreenHeader(
               tagLeft: 'MOTO / GARAŻ',
-              tagRight: 'WYLOGUJ',
-              onTagRightTap: () => ref.read(authProvider.notifier).logout(),
+              tagRight: 'USTAWIENIA',
+              onTagRightTap: () => context.push('/settings'),
               title: 'GARAŻ',
               subtitle: 'STANOWISKA: ${Fmt.serial(count, width: 2)}',
-              action: SmallButton(
-                label: '+ DO GARAŻU',
-                onPressed: () => context.push('/vehicles/new'),
+              action: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SmallButton(
+                    label: 'AI',
+                    onPressed: () => context.push('/ai-assistant'),
+                  ),
+                  const SizedBox(width: 8),
+                  SmallButton(
+                    label: '+ DO GARAŻU',
+                    onPressed: () => context.push('/vehicles/new'),
+                  ),
+                ],
               ),
             ),
             Expanded(child: _buildBody(context, ref, state)),

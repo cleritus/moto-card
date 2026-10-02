@@ -12,6 +12,14 @@ class AppConstants {
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String userKey = 'user';
+  static const String claudeApiKeyKey = 'claude_api_key';
+
+  // AI bridge (Claude) — user's own key, called directly from the device,
+  // never through this app's own backend/baseUrl above.
+  static const String claudeApiBaseUrl = 'https://api.anthropic.com';
+  static const String claudeApiVersion = '2023-06-01';
+  static const String claudeModel = 'claude-sonnet-5';
+  static const int aiMaxToolLoopIterations = 6;
 
   // Pagination
   static const int defaultPageSize = 20;

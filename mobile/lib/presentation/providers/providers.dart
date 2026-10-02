@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
+import '../../core/ai/claude_client.dart';
+import '../../core/ai/tool_executor.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
@@ -8,11 +10,13 @@ import '../../data/datasources/vehicle_remote_data_source.dart';
 import '../../data/datasources/fuel_log_remote_data_source.dart';
 import '../../data/datasources/service_log_remote_data_source.dart';
 import '../../data/datasources/reminder_remote_data_source.dart';
+import '../../data/repositories/ai_settings_repository_impl.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/vehicle_repository_impl.dart';
 import '../../data/repositories/fuel_log_repository_impl.dart';
 import '../../data/repositories/service_log_repository_impl.dart';
 import '../../data/repositories/reminder_repository_impl.dart';
+import '../../domain/repositories/ai_settings_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/vehicle_repository.dart';
 import '../../domain/repositories/fuel_log_repository.dart';
@@ -87,4 +91,24 @@ final reminderRemoteDataSourceProvider = Provider<ReminderRemoteDataSource>((ref
 final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
   final dataSource = ref.watch(reminderRemoteDataSourceProvider);
   return ReminderRepositoryImpl(dataSource: dataSource);
+});
+
+// AI bridge — ClaudeClient is its own Dio (different host/auth, see
+// claude_client.dart), never ref.watch(dioProvider).
+final claudeClientProvider = Provider<ClaudeClient>((ref) => ClaudeClient());
+
+final aiSettingsRepositoryProvider = Provider<AiSettingsRepository>((ref) {
+  final storage = ref.watch(secureStorageProvider);
+  final client = ref.watch(claudeClientProvider);
+  return AiSettingsRepositoryImpl(storage: storage, client: client);
+});
+
+final aiToolExecutorProvider = Provider<AiToolExecutor>((ref) {
+  return AiToolExecutor(
+    vehicleRepository: ref.watch(vehicleRepositoryProvider),
+    fuelLogRepository: ref.watch(fuelLogRepositoryProvider),
+    serviceLogRepository: ref.watch(serviceLogRepositoryProvider),
+    reminderRepository: ref.watch(reminderRepositoryProvider),
+    ref: ref,
+  );
 });
