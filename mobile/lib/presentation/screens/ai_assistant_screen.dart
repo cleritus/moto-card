@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
 import '../providers/ai_assistant_provider.dart';
 import '../providers/ai_settings_provider.dart';
+import '../widgets/delete_confirmation_dialog.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/garage_app_bar.dart';
 import '../widgets/garage_button.dart';
@@ -53,6 +54,18 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     ref.listen<AiAssistantState>(aiAssistantProvider, (previous, next) {
       if (next.messages.length != (previous?.messages.length ?? 0)) {
         _scrollToEnd();
+      }
+      final pending = next.pendingAction;
+      if (pending != null && previous?.pendingAction == null) {
+        confirmDelete(
+          context,
+          title: pending.title,
+          message: pending.message,
+          confirmLabel: pending.confirmLabel,
+        ).then((approved) {
+          if (!mounted) return;
+          ref.read(aiAssistantProvider.notifier).resolveConfirmation(approved);
+        });
       }
     });
 

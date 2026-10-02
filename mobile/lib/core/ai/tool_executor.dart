@@ -17,6 +17,19 @@ import '../../presentation/providers/reminder_provider.dart';
 import '../../presentation/providers/service_log_provider.dart';
 import '../../presentation/providers/vehicle_provider.dart';
 
+/// What the user sees in the confirmation dialog before a gated tool runs.
+class AiActionPreview {
+  final String title;
+  final String message;
+  final String confirmLabel;
+
+  const AiActionPreview({
+    required this.title,
+    required this.message,
+    required this.confirmLabel,
+  });
+}
+
 /// Executes Claude's tool calls against the app's OWN existing repositories
 /// — the same objects the manual-CRUD screens use (same JWT, same error
 /// handling, same backend). Never talks to Anthropic itself; that is
@@ -96,6 +109,154 @@ class AiToolExecutor {
       default:
         throw AppException(message: 'Nieznane narzędzie: $name');
     }
+  }
+
+  // --- confirmation gate ---
+
+  /// Edits and deletes need the user's explicit OK in the UI before they run
+  /// — enforced by the orchestrator, not left to the model's good manners.
+  /// complete/incomplete reminder stay open: one tap undoes them.
+  static const _gatedTools = {
+    'update_vehicle',
+    'delete_vehicle',
+    'update_fuel_log',
+    'delete_fuel_log',
+    'update_service_log',
+    'delete_service_log',
+    'update_reminder',
+    'delete_reminder',
+  };
+
+  bool isGated(String name) => _gatedTools.contains(name);
+
+  static const _idKeys = {
+    'vehicleId',
+    'fuelLogId',
+    'serviceLogId',
+    'reminderId',
+  };
+
+  static const _fieldLabels = {
+    'name': 'Nazwa',
+    'make': 'Marka',
+    'vehicleModel': 'Model',
+    'year': 'Rok',
+    'licensePlate': 'Nr rej.',
+    'mileage': 'Przebieg',
+    'engineCapacity': 'Pojemność',
+    'vin': 'VIN',
+    'purchaseDate': 'Data zakupu',
+    'notes': 'Notatki',
+    'fuelAmount': 'Litry',
+    'totalCost': 'Koszt',
+    'date': 'Data',
+    'serviceType': 'Rodzaj serwisu',
+    'description': 'Opis',
+    'mechanic': 'Mechanik',
+    'title': 'Tytuł',
+    'type': 'Typ',
+    'dueDate': 'Termin',
+    'dueMileage': 'Przebieg docelowy',
+    'intervalKm': 'Interwał',
+    'lastDoneMileage': 'Ostatnio wykonano przy',
+  };
+
+  String _subjectFor(String name) {
+    if (name.endsWith('_vehicle')) return 'pojazd';
+    if (name.endsWith('_fuel_log')) return 'tankowanie';
+    if (name.endsWith('_service_log')) return 'wpis serwisowy';
+    return 'przypomnienie';
+  }
+
+  String _show(Object? value) =>
+      value == null || value.toString().isEmpty ? '—' : value.toString();
+
+  /// Builds the dialog text for a gated call: which object it hits (looked up
+  /// through the same repositories, so the user sees a name, not an id) and,
+  /// for updates, old -> new per changed field. If the lookup fails the
+  /// dialog still appears — the gate never depends on the lookup working.
+  Future<AiActionPreview> describe(
+    String name,
+    Map<String, dynamic> input,
+  ) async {
+    final isDelete = name.startsWith('delete_');
+    final subject = _subjectFor(name);
+    var target = 'nie udało się pobrać szczegółów';
+    var vehicleLine = '';
+    var current = <String, dynamic>{};
+    var isVehicle = false;
+
+    try {
+      final vehicleId = input['vehicleId'] as String?;
+      if (vehicleId != null) {
+        final vehicle = await _vehicleRepository.getVehicle(vehicleId);
+        if (name.endsWith('_vehicle')) {
+          isVehicle = true;
+          target =
+              '${vehicle.name} (${vehicle.make} ${vehicle.vehicleModel}, ${vehicle.year})';
+          current = {
+            ..._vehicleSummary(vehicle),
+            'purchaseDate': vehicle.purchaseDate != null
+                ? formatCalendarDate(vehicle.purchaseDate!)
+                : null,
+            'notes': vehicle.notes,
+          };
+        } else {
+          vehicleLine = 'Pojazd: ${vehicle.name}\n';
+          if (name.endsWith('_fuel_log')) {
+            final log = await _fuelLogRepository.getFuelLog(
+              vehicleId,
+              _require(input, 'fuelLogId'),
+            );
+            target =
+                '${formatCalendarDate(log.date)}: ${log.fuelAmount} l, ${log.totalCost} zł, ${log.mileage} km';
+            current = _fuelLogSummary(log);
+          } else if (name.endsWith('_service_log')) {
+            final log = await _serviceLogRepository.getServiceLog(
+              vehicleId,
+              _require(input, 'serviceLogId'),
+            );
+            target =
+                '${log.serviceType}, ${formatCalendarDate(log.date)}, ${log.mileage} km';
+            current = _serviceLogSummary(log);
+          } else {
+            final reminder = await _reminderRepository.getReminder(
+              vehicleId,
+              _require(input, 'reminderId'),
+            );
+            target = reminder.title;
+            current = _reminderSummary(reminder);
+          }
+        }
+      }
+    } catch (_) {
+      // Fall through with the generic target text.
+    }
+
+    final buffer = StringBuffer('${vehicleLine}Obiekt: $target');
+    if (isDelete) {
+      if (isVehicle) {
+        buffer.write(
+          '\n\nRazem z całą historią: tankowania, serwisy, przypomnienia. '
+          'Nieodwracalne.',
+        );
+      }
+    } else {
+      buffer.write('\n\nZmiany:');
+      for (final entry in input.entries) {
+        if (_idKeys.contains(entry.key)) continue;
+        final label = _fieldLabels[entry.key] ?? entry.key;
+        buffer.write(
+          '\n• $label: ${_show(current[entry.key])} → ${_show(entry.value)}',
+        );
+      }
+    }
+
+    return AiActionPreview(
+      title: isDelete ? 'Usunąć $subject?' : 'Zmienić $subject?',
+      message: buffer.toString(),
+      confirmLabel: isDelete ? 'USUŃ' : 'ZMIEŃ',
+    );
   }
 
   // --- helpers ---

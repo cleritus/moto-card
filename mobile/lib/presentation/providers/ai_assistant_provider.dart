@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/ai/tool_executor.dart';
 import '../../core/ai/tool_loop_orchestrator.dart';
 import 'providers.dart';
 
@@ -18,18 +21,27 @@ class AiAssistantState {
   final AiAssistantStatus status;
   final List<AiChatMessage> messages;
 
+  /// Set while an edit/delete waits for the user's OK; the screen shows the
+  /// confirmation dialog for it.
+  final AiActionPreview? pendingAction;
+
   const AiAssistantState({
     this.status = AiAssistantStatus.idle,
     this.messages = const [],
+    this.pendingAction,
   });
 
   AiAssistantState copyWith({
     AiAssistantStatus? status,
     List<AiChatMessage>? messages,
+    AiActionPreview? pendingAction,
+    bool clearPendingAction = false,
   }) =>
       AiAssistantState(
         status: status ?? this.status,
         messages: messages ?? this.messages,
+        pendingAction:
+            clearPendingAction ? null : (pendingAction ?? this.pendingAction),
       );
 }
 
@@ -39,8 +51,34 @@ class AiAssistantState {
 class AiAssistantNotifier extends StateNotifier<AiAssistantState> {
   final Ref _ref;
   AiOrchestrator? _orchestrator;
+  Completer<bool>? _pendingConfirmation;
 
   AiAssistantNotifier(this._ref) : super(const AiAssistantState());
+
+  Future<bool> _requestConfirmation(AiActionPreview preview) {
+    _pendingConfirmation?.complete(false);
+    final completer = Completer<bool>();
+    _pendingConfirmation = completer;
+    state = state.copyWith(pendingAction: preview);
+    return completer.future;
+  }
+
+  /// Called by the screen with the user's answer to the dialog.
+  void resolveConfirmation(bool approved) {
+    final completer = _pendingConfirmation;
+    if (completer == null || completer.isCompleted) return;
+    _pendingConfirmation = null;
+    state = state.copyWith(clearPendingAction: true);
+    completer.complete(approved);
+  }
+
+  @override
+  void dispose() {
+    // Leaving the screen mid-question counts as "no".
+    final completer = _pendingConfirmation;
+    if (completer != null && !completer.isCompleted) completer.complete(false);
+    super.dispose();
+  }
 
   Future<void> send(String text) async {
     if (text.trim().isEmpty) return;
@@ -69,6 +107,7 @@ class AiAssistantNotifier extends StateNotifier<AiAssistantState> {
     }
 
     final result = await orchestrator.send(text);
+    if (!mounted) return;
     if (result.status == AiTurnStatus.done) {
       state = state.copyWith(
         status: AiAssistantStatus.idle,
@@ -99,6 +138,7 @@ class AiAssistantNotifier extends StateNotifier<AiAssistantState> {
       client: _ref.read(claudeClientProvider),
       executor: _ref.read(aiToolExecutorProvider),
       apiKey: apiKey,
+      confirm: _requestConfirmation,
     );
     return _orchestrator;
   }

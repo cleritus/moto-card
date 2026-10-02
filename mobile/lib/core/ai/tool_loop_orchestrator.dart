@@ -6,6 +6,9 @@ import 'system_prompt.dart';
 import 'tool_definitions.dart';
 import 'tool_executor.dart';
 
+/// Asks the user to approve a gated action; true = go ahead.
+typedef AiConfirm = Future<bool> Function(AiActionPreview preview);
+
 enum AiTurnStatus { done, error }
 
 class AiTurnResult {
@@ -20,21 +23,28 @@ class AiTurnResult {
 /// -> tool_result -> send again -> ... -> end_turn.
 ///
 /// One instance per chat session — `_messages` accumulates the whole
-/// conversation so Claude keeps context turn to turn. No confirmation
-/// gating yet (Phase 3); every tool call here executes immediately.
+/// conversation so Claude keeps context turn to turn.
+///
+/// Edits and deletes ([AiToolExecutor.isGated]) are a hard gate: the loop
+/// stops and waits for [AiConfirm]; no answer, a "no", or no handler at all
+/// means the tool does NOT run (fail closed). Claude gets an error
+/// tool_result and tells the user nothing changed.
 class AiOrchestrator {
   final ClaudeClient _client;
   final AiToolExecutor _executor;
   final String _apiKey;
+  final AiConfirm? _confirm;
   final List<ClaudeMessage> _messages = [];
 
   AiOrchestrator({
     required ClaudeClient client,
     required AiToolExecutor executor,
     required String apiKey,
+    AiConfirm? confirm,
   })  : _client = client,
         _executor = executor,
-        _apiKey = apiKey;
+        _apiKey = apiKey,
+        _confirm = confirm;
 
   Future<AiTurnResult> send(String userText) async {
     _messages.add(ClaudeMessage(
@@ -73,9 +83,26 @@ class AiOrchestrator {
           response.content.where((b) => b.type == 'tool_use').toList();
       final results = <ClaudeContentBlock>[];
       for (final block in toolUseBlocks) {
+        final toolInput = block.toolInput ?? {};
+        if (_executor.isGated(block.toolName!)) {
+          final confirm = _confirm;
+          final approved = confirm != null &&
+              await confirm(
+                await _executor.describe(block.toolName!, toolInput),
+              );
+          if (!approved) {
+            results.add(ClaudeContentBlock.toolResult(
+              toolUseId: block.toolUseId!,
+              content:
+                  'Użytkownik odrzucił tę operację w aplikacji. Nic nie '
+                  'zostało zmienione — nie ponawiaj, tylko to potwierdź.',
+              isError: true,
+            ));
+            continue;
+          }
+        }
         try {
-          final result =
-              await _executor.execute(block.toolName!, block.toolInput ?? {});
+          final result = await _executor.execute(block.toolName!, toolInput);
           results.add(ClaudeContentBlock.toolResult(
             toolUseId: block.toolUseId!,
             content: result,
