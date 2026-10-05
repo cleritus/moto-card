@@ -210,12 +210,6 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
           _errorMessage = next.errorMessage;
           _isLoading = false;
         });
-      } else if (next.status == ReminderDetailStatus.loaded && _isLoading) {
-        if (mounted) {
-          setState(() => _errorMessage = null);
-          ref.read(reminderListProvider((widget.vehicleId, ReminderFilter.active)).notifier).refresh();
-          context.pop();
-        }
       }
     });
 

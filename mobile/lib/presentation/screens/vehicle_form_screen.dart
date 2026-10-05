@@ -190,12 +190,6 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
             _errorMessage = next.errorMessage;
             _isLoading = false;
           });
-        } else if (next.status == VehicleDetailStatus.loaded && _isLoading) {
-          if (mounted) {
-            setState(() => _errorMessage = null);
-            ref.read(vehicleListProvider.notifier).refresh();
-            context.pop();
-          }
         }
       });
     }

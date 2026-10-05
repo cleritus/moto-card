@@ -1,9 +1,10 @@
 import 'dart:io' show Platform;
 
 class AppConstants {
-  // API — Android emulator reaches the host via 10.0.2.2; desktop/iOS use localhost.
+  // API — physical Android phone reaches the dev PC over LAN (swap back to
+  // 10.0.2.2 for the emulator); desktop/iOS use localhost.
   static String get baseUrl => Platform.isAndroid
-      ? 'http://10.0.2.2:3000/api'
+      ? 'http://192.168.0.25:3000/api'
       : 'http://localhost:3000/api';
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

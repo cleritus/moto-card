@@ -165,12 +165,6 @@ class _ServiceLogFormScreenState extends ConsumerState<ServiceLogFormScreen> {
           _errorMessage = next.errorMessage;
           _isLoading = false;
         });
-      } else if (next.status == ServiceLogDetailStatus.loaded && _isLoading) {
-        if (mounted) {
-          setState(() => _errorMessage = null);
-          ref.read(serviceLogListProvider(widget.vehicleId).notifier).refresh();
-          context.pop();
-        }
       }
     });
 

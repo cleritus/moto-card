@@ -70,6 +70,9 @@ class _PlateRowView extends StatelessWidget {
     final valueColor =
         onPaper ? const Color(0xFF231F17) : AppColors.bone;
     final dotColor = onPaper ? AppColors.paperHairline : AppColors.leaderDot;
+    // Approximate usable row width: screen minus page margins and plate padding.
+    final rowWidth =
+        MediaQuery.sizeOf(context).width - 2 * AppGeo.screenMargin - 28;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -85,48 +88,46 @@ class _PlateRowView extends StatelessWidget {
       ),
       // Key and value take their natural width (capped), the leader is the
       // only flexible child — so every value ends flush on the right edge.
-      child: LayoutBuilder(
-        builder: (context, constraints) => Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            ConstrainedBox(
-              constraints:
-                  BoxConstraints(maxWidth: constraints.maxWidth * 0.4),
-              child: Text(
-                row.label.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.label(size: 9.5, color: keyColor),
+      // Caps come from the screen width, not a LayoutBuilder: rows live inside
+      // WorkshopCard's IntrinsicHeight, which cannot measure a LayoutBuilder.
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: rowWidth * 0.4),
+            child: Text(
+              row.label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.label(size: 9.5, color: keyColor),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: CustomPaint(
+                size: const Size(double.infinity, 1),
+                painter: _DottedLeaderPainter(dotColor),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: CustomPaint(
-                  size: const Size(double.infinity, 1),
-                  painter: _DottedLeaderPainter(dotColor),
-                ),
+          ),
+          const SizedBox(width: 8),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: rowWidth * 0.55),
+            child: Text(
+              row.value,
+              maxLines: 2,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.data(
+                size: row.emphasis ? 15 : 12.5,
+                weight: row.emphasis ? FontWeight.w600 : FontWeight.w500,
+                color: valueColor,
               ),
             ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints:
-                  BoxConstraints(maxWidth: constraints.maxWidth * 0.55),
-              child: Text(
-                row.value,
-                maxLines: 2,
-                textAlign: TextAlign.right,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.data(
-                  size: row.emphasis ? 15 : 12.5,
-                  weight: row.emphasis ? FontWeight.w600 : FontWeight.w500,
-                  color: valueColor,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

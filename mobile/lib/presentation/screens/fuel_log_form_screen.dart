@@ -153,12 +153,6 @@ class _FuelLogFormScreenState extends ConsumerState<FuelLogFormScreen> {
           _errorMessage = next.errorMessage;
           _isLoading = false;
         });
-      } else if (next.status == FuelLogDetailStatus.loaded && _isLoading) {
-        if (mounted) {
-          setState(() => _errorMessage = null);
-          ref.read(fuelLogListProvider(widget.vehicleId).notifier).refresh();
-          context.pop();
-        }
       }
     });
 
