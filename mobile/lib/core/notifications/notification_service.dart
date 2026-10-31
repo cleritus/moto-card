@@ -29,6 +29,8 @@ class NotificationService {
   bool _initialized = false;
 
   Future<void> initialize() async {
+    // The local-notifications plugin has no web implementation.
+    if (kIsWeb) return;
     if (_initialized) return;
 
     tz_data.initializeTimeZones();
@@ -76,6 +78,7 @@ class NotificationService {
   /// Schedules (or reschedules) the notifications for a date-type reminder.
   /// No-op for mileage-type reminders and for completed ones.
   Future<void> scheduleForReminder(Reminder reminder) async {
+    if (kIsWeb) return;
     await cancelForReminder(reminder.id);
 
     if (reminder.isCompleted) return;
@@ -109,6 +112,7 @@ class NotificationService {
   /// Cancels any pending scheduled notifications for this reminder.
   /// Safe to call even if none were ever scheduled.
   Future<void> cancelForReminder(String reminderId) async {
+    if (kIsWeb) return;
     await _plugin.cancel(_warningNotificationId(reminderId));
     await _plugin.cancel(_dueNotificationId(reminderId));
   }
@@ -121,6 +125,7 @@ class NotificationService {
     required Reminder reminder,
     required int currentMileage,
   }) async {
+    if (kIsWeb) return;
     if (reminder.isCompleted) return;
     if (reminder.type != ReminderType.mileage || reminder.dueMileage == null) {
       return;

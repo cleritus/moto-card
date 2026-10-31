@@ -189,7 +189,9 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
             }
           }
           if (mounted) {
-            ref.read(reminderListProvider((widget.vehicleId, ReminderFilter.active)).notifier).refresh();
+            for (final filter in ReminderFilter.values) {
+              ref.read(reminderListProvider((widget.vehicleId, filter)).notifier).refresh();
+            }
             context.pop();
           }
         } finally {
